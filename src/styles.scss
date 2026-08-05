@@ -1,1 +1,16 @@
-/* You can add global styles to this file, and also import other style files */
+/* Importar tipografía Inter de Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Aplicar la fuente a todo el proyecto por defecto */
+@layer base {
+  html {
+    font-family: 'Inter', sans-serif;
+  }
+  body {
+    @apply bg-gray-50 text-gray-900; /* Fondo ligeramente gris para que resalten las tarjetas blancas */
+  }
+}
