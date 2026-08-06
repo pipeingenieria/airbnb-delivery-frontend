@@ -128,19 +128,38 @@ showToast(message: string) {
     }, 2500);
   }
 
-  addToCart(product: Product, event: Event) {
+  // NUEVO: Calcula los tiempos de entrega únicos basados en lo que hay en el carrito
+  deliveryEstimates = computed(() => {
+    const uniqueEstimates = new Map<string, string>();
+    this.cart().forEach((item: any) => {
+      if (item.establishmentName && item.deliveryTime) {
+        uniqueEstimates.set(item.establishmentName, item.deliveryTime);
+      }
+    });
+    // Retorna un array de objetos [{name: 'Restaurante', time: '30 min'}, ...]
+    return Array.from(uniqueEstimates, ([name, time]) => ({ name, time }));
+  });
+
+  // ACTUALIZADO: Guarda el nombre y tiempo del establecimiento junto con el producto
+  addToCart(product: any, event: Event) {
     event.stopPropagation();
     const currentCart = this.cart();
-    const existingProduct = currentCart.find(item => item.id === product.id);
+    const existingProduct = currentCart.find((item: any) => item.id === product.id);
+    const currentEst = this.selectedEstablishment(); // Obtenemos el establecimiento actual
 
     if (existingProduct) {
       existingProduct.quantity += 1;
       this.cart.set([...currentCart]);
     } else {
-      this.cart.set([...currentCart, { ...product, quantity: 1 }]);
+      this.cart.set([...currentCart, { 
+        ...product, 
+        quantity: 1,
+        // Inyectamos los datos del establecimiento al carrito
+        establishmentName: currentEst?.name || 'Local Store',
+        deliveryTime: currentEst?.time || 'Pending'
+      }]);
     }
     
-    // Inyectamos el nombre del producto directamente
     this.showToast(`${product.name} added to cart`);
   }
 
