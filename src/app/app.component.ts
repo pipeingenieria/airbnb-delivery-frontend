@@ -44,6 +44,10 @@ export class AppComponent {
 
  toastMessage = signal<string | null>(null);
   toastTimeout: any;
+  
+  // Flujo del Checkout
+  checkoutStep = signal<'cart' | 'details' | 'processing' | 'success'>('cart');
+  orderNumber = signal<string>('');
 
   cartTotal = computed(() => this.cart().reduce((acc, item) => acc + (item.price * item.quantity), 0));
   cartCount = computed(() => this.cart().reduce((acc, item) => acc + item.quantity, 0));
@@ -180,12 +184,37 @@ showToast(message: string) {
 
   openCart() {
     if (this.cartCount() > 0) {
+      this.checkoutStep.set('cart'); // Siempre abrir en el paso 1
       this.isCartOpen.set(true);
     }
   }
 
   closeCart() {
     this.isCartOpen.set(false);
+    // Reiniciamos el estado un momento después para que no se vea el salto durante la animación de cierre
+    setTimeout(() => {
+      this.checkoutStep.set('cart');
+    }, 300);
+  }
+
+  goToDetails() {
+    this.checkoutStep.set('details');
+  }
+
+  backToCart() {
+    this.checkoutStep.set('cart');
+  }
+
+  processPayment() {
+    this.checkoutStep.set('processing');
+    
+    // Simulamos la pasarela de pagos (3 segundos de carga)
+    setTimeout(() => {
+      // Generamos un número de orden aleatorio
+      this.orderNumber.set('ORD-' + Math.floor(10000 + Math.random() * 90000));
+      this.checkoutStep.set('success');
+      this.cart.set([]); // Vaciamos el carrito silenciosamente
+    }, 3000);
   }
 
   formatPrice(price: number): string {

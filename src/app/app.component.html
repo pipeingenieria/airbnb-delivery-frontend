@@ -289,69 +289,156 @@
   }
 
   <!-- ========================================== -->
-  <!-- VIEW 3: CHECKOUT MODAL (CARRITO MEJORADO) -->
+  <!-- VIEW 3: CHECKOUT MODAL (FLUJO COMPLETO) -->
   <!-- ========================================== -->
   @if (isCartOpen()) {
     <div class="fixed inset-0 z-[100] flex flex-col animate-entrance" [ngClass]="isDarkMode ? 'bg-zinc-950' : 'bg-gray-50'">
       
-      <!-- Cart Header -->
-      <div class="px-4 py-4 flex items-center justify-between border-b" [ngClass]="isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-200'">
-        <div class="flex items-center">
-          <button (click)="closeCart()" class="p-2 rounded-full transition-colors" [ngClass]="isDarkMode ? 'hover:bg-zinc-800 text-white' : 'hover:bg-gray-100 text-gray-900'">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
-          </button>
-          <h2 class="text-xl font-bold ml-2" [ngClass]="isDarkMode ? 'text-white' : 'text-gray-900'">Your Order</h2>
-        </div>
+      @switch (checkoutStep()) {
         
-        <button (click)="clearCart()" class="text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors" 
-                [ngClass]="isDarkMode ? 'text-rose-400 hover:bg-rose-500/10' : 'text-rose-600 hover:bg-rose-50'">
-          Clear all
-        </button>
-      </div>
-
-      <!-- Item List -->
-      <div class="flex-1 overflow-y-auto p-4 md:px-8 max-w-4xl mx-auto w-full">
-        @for (item of cart(); track item.id) {
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between py-5 border-b gap-4" [ngClass]="isDarkMode ? 'border-zinc-800' : 'border-gray-200'">
-            
-            <div class="flex items-center gap-3 flex-1">
-              <img [src]="item.imageUrl" class="w-14 h-14 rounded-xl object-cover shadow-sm border" [ngClass]="isDarkMode ? 'border-zinc-800' : 'border-gray-100'">
-              <div class="flex flex-col">
-                <span class="font-semibold text-[15px] line-clamp-1" [ngClass]="isDarkMode ? 'text-zinc-100' : 'text-gray-900'">{{ item.name }}</span>
-                <span class="font-medium text-sm mt-0.5" [ngClass]="isDarkMode ? 'text-rose-400' : 'text-rose-500'">{{ formatPrice(item.price * item.quantity) }}</span>
-              </div>
+        <!-- PASO 1: EL CARRITO ACTUAL -->
+        @case ('cart') {
+          <div class="px-4 py-4 flex items-center justify-between border-b" [ngClass]="isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-200'">
+            <div class="flex items-center">
+              <button (click)="closeCart()" class="p-2 rounded-full transition-colors" [ngClass]="isDarkMode ? 'hover:bg-zinc-800 text-white' : 'hover:bg-gray-100 text-gray-900'">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+              <h2 class="text-xl font-bold ml-2" [ngClass]="isDarkMode ? 'text-white' : 'text-gray-900'">Your Order</h2>
             </div>
-            
-            <div class="flex items-center gap-4 self-end sm:self-auto">
-              <div class="flex items-center gap-3 rounded-full px-3 py-1 border shadow-sm" [ngClass]="isDarkMode ? 'bg-zinc-900 border-zinc-700' : 'bg-white border-gray-300'">
-                <button (click)="removeFromCart(item.id)" class="text-lg font-bold" [ngClass]="isDarkMode ? 'text-rose-400' : 'text-gray-700'">-</button>
-                <span class="text-sm font-semibold w-5 text-center" [ngClass]="isDarkMode ? 'text-white' : 'text-gray-900'">{{ item.quantity }}</span>
-                <button (click)="addToCart(item, $event)" class="text-lg font-bold" [ngClass]="isDarkMode ? 'text-rose-400' : 'text-gray-700'">+</button>
+            <button (click)="clearCart()" class="text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors" [ngClass]="isDarkMode ? 'text-rose-400 hover:bg-rose-500/10' : 'text-rose-600 hover:bg-rose-50'">
+              Clear all
+            </button>
+          </div>
+
+          <div class="flex-1 overflow-y-auto p-4 md:px-8 max-w-4xl mx-auto w-full">
+            @for (item of cart(); track item.id) {
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between py-5 border-b gap-4" [ngClass]="isDarkMode ? 'border-zinc-800' : 'border-gray-200'">
+                <div class="flex items-center gap-3 flex-1">
+                  <img [src]="item.imageUrl" class="w-14 h-14 rounded-xl object-cover shadow-sm border" [ngClass]="isDarkMode ? 'border-zinc-800' : 'border-gray-100'">
+                  <div class="flex flex-col">
+                    <span class="font-semibold text-[15px] line-clamp-1" [ngClass]="isDarkMode ? 'text-zinc-100' : 'text-gray-900'">{{ item.name }}</span>
+                    <span class="font-medium text-sm mt-0.5" [ngClass]="isDarkMode ? 'text-rose-400' : 'text-rose-500'">{{ formatPrice(item.price * item.quantity) }}</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-4 self-end sm:self-auto">
+                  <div class="flex items-center gap-3 rounded-full px-3 py-1 border shadow-sm" [ngClass]="isDarkMode ? 'bg-zinc-900 border-zinc-700' : 'bg-white border-gray-300'">
+                    <button (click)="removeFromCart(item.id)" class="text-lg font-bold" [ngClass]="isDarkMode ? 'text-rose-400' : 'text-gray-700'">-</button>
+                    <span class="text-sm font-semibold w-5 text-center" [ngClass]="isDarkMode ? 'text-white' : 'text-gray-900'">{{ item.quantity }}</span>
+                    <button (click)="addToCart(item, $event)" class="text-lg font-bold" [ngClass]="isDarkMode ? 'text-rose-400' : 'text-gray-700'">+</button>
+                  </div>
+                  <button (click)="removeItemFully(item.id)" class="p-2 rounded-lg transition-colors" [ngClass]="isDarkMode ? 'text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10' : 'text-gray-400 hover:text-rose-600 hover:bg-rose-50'">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                  </button>
+                </div>
               </div>
-              
-              <button (click)="removeItemFully(item.id)" class="p-2 rounded-lg transition-colors" 
-                      [ngClass]="isDarkMode ? 'text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10' : 'text-gray-400 hover:text-rose-600 hover:bg-rose-50'">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            }
+          </div>
+
+          <div class="p-6 border-t rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] flex flex-col items-center" [ngClass]="isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-100'">
+            <div class="w-full sm:w-96">
+              <div class="flex justify-between items-center mb-5 text-lg px-2">
+                <span class="font-bold" [ngClass]="isDarkMode ? 'text-zinc-100' : 'text-gray-900'">Total</span>
+                <span class="font-extrabold text-2xl" [ngClass]="isDarkMode ? 'text-white' : 'text-gray-900'">{{ formatPrice(cartTotal()) }}</span>
+              </div>
+              <!-- Botón ajustado para ir al Paso 2 -->
+              <button (click)="goToDetails()" class="w-full py-3.5 rounded-2xl font-bold text-base transition-transform hover:scale-[1.01] active:scale-95 flex justify-center items-center gap-2 border mx-auto"
+                      [ngClass]="isDarkMode ? 'glow-rose bg-rose-500 border-rose-400 text-white' : 'glow-dark bg-gray-900 border-gray-800 text-white'">
+                Continue to Details
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
               </button>
             </div>
           </div>
         }
-      </div>
 
-      <!-- Checkout Footer -->
-      <div class="p-6 border-t rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] flex flex-col items-center" [ngClass]="isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-100'">
-        <div class="w-full sm:w-96">
-          <div class="flex justify-between items-center mb-5 text-lg px-2">
-            <span class="font-bold" [ngClass]="isDarkMode ? 'text-zinc-100' : 'text-gray-900'">Total</span>
-            <span class="font-extrabold text-2xl" [ngClass]="isDarkMode ? 'text-white' : 'text-gray-900'">{{ formatPrice(cartTotal()) }}</span>
+        <!-- PASO 2: DETALLES Y TIEMPOS DE ENTREGA -->
+        @case ('details') {
+          <div class="px-4 py-4 flex items-center border-b" [ngClass]="isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-200'">
+            <button (click)="backToCart()" class="p-2 rounded-full transition-colors" [ngClass]="isDarkMode ? 'hover:bg-zinc-800 text-white' : 'hover:bg-gray-100 text-gray-900'">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
+            <h2 class="text-xl font-bold ml-2" [ngClass]="isDarkMode ? 'text-white' : 'text-gray-900'">Delivery Info</h2>
           </div>
-          <button class="w-full py-3.5 rounded-2xl font-bold text-base transition-transform hover:scale-[1.01] active:scale-95 flex justify-center items-center gap-2 border mx-auto"
-                  [ngClass]="isDarkMode ? 'glow-rose bg-rose-500 border-rose-400 text-white' : 'glow-rose bg-rose-500 border-rose-400 text-white'">
-            Go to checkout
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-          </button>
-        </div>
-      </div>
+
+          <div class="flex-1 overflow-y-auto p-6 md:px-8 max-w-lg mx-auto w-full animate-entrance">
+            <!-- Cuadro de Información Premium -->
+            <div class="p-5 rounded-2xl border shadow-sm mb-8 flex gap-4 items-start" [ngClass]="isDarkMode ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50 border-rose-100'">
+              <div class="p-2 rounded-full mt-0.5" [ngClass]="isDarkMode ? 'bg-rose-500/20 text-rose-400' : 'bg-rose-100 text-rose-500'">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              </div>
+              <div>
+                <h3 class="font-bold text-base mb-1" [ngClass]="isDarkMode ? 'text-rose-400' : 'text-rose-700'">Estimated Delivery Time</h3>
+                <p class="text-sm leading-relaxed" [ngClass]="isDarkMode ? 'text-zinc-300' : 'text-rose-900/80'">
+                  Based on your location in <strong>Loft El Poblado</strong>, your order will arrive in <strong>35 - 45 minutes</strong> directly to your door.
+                </p>
+              </div>
+            </div>
+
+            <!-- Formulario Simulado -->
+            <div class="flex flex-col gap-2 mb-6">
+              <label class="text-sm font-semibold ml-1" [ngClass]="isDarkMode ? 'text-zinc-300' : 'text-gray-700'">Apt / Unit Number</label>
+              <input type="text" placeholder="e.g. 402" class="w-full px-4 py-3.5 rounded-xl border font-medium focus:outline-none focus:ring-2 focus:ring-rose-500 transition-shadow" [ngClass]="isDarkMode ? 'bg-zinc-900 border-zinc-700 text-white placeholder-zinc-500' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'">
+            </div>
+            <div class="flex flex-col gap-2">
+              <label class="text-sm font-semibold ml-1" [ngClass]="isDarkMode ? 'text-zinc-300' : 'text-gray-700'">Delivery Instructions (Optional)</label>
+              <textarea placeholder="Leave at the door, call upon arrival..." rows="3" class="w-full px-4 py-3 rounded-xl border font-medium focus:outline-none focus:ring-2 focus:ring-rose-500 transition-shadow resize-none" [ngClass]="isDarkMode ? 'bg-zinc-900 border-zinc-700 text-white placeholder-zinc-500' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'"></textarea>
+            </div>
+          </div>
+
+          <div class="p-6 border-t rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] flex flex-col items-center" [ngClass]="isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-100'">
+            <div class="w-full sm:w-96 flex flex-col gap-4">
+              <div class="flex justify-between items-center text-lg px-2">
+                <span class="font-bold" [ngClass]="isDarkMode ? 'text-zinc-400' : 'text-gray-500'">Total to pay</span>
+                <span class="font-extrabold text-2xl" [ngClass]="isDarkMode ? 'text-white' : 'text-gray-900'">{{ formatPrice(cartTotal()) }}</span>
+              </div>
+              <button (click)="processPayment()" class="w-full py-3.5 rounded-2xl font-bold text-base transition-transform hover:scale-[1.01] active:scale-95 flex justify-center items-center gap-2 border mx-auto glow-rose"
+                      [ngClass]="isDarkMode ? 'bg-rose-500 border-rose-400 text-white' : 'bg-rose-500 border-rose-400 text-white'">
+                Pay with Credit Card
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- PASO 3: PROCESANDO PAGO (Loader Elegante) -->
+        @case ('processing') {
+          <div class="flex-1 flex flex-col items-center justify-center p-8 animate-entrance">
+            <!-- Spinner -->
+            <div class="relative w-20 h-20 mb-8">
+              <div class="absolute inset-0 rounded-full border-4 border-rose-200" [ngClass]="{'border-rose-900': isDarkMode}"></div>
+              <div class="absolute inset-0 rounded-full border-4 border-rose-500 border-t-transparent animate-spin"></div>
+            </div>
+            <h2 class="text-2xl font-bold mb-2 text-center" [ngClass]="isDarkMode ? 'text-white' : 'text-gray-900'">Processing Payment</h2>
+            <p class="text-center font-medium" [ngClass]="isDarkMode ? 'text-zinc-400' : 'text-gray-500'">
+              Securely connecting to your bank...<br>Please do not close this window.
+            </p>
+          </div>
+        }
+
+        <!-- PASO 4: ÉXITO -->
+        @case ('success') {
+          <div class="flex-1 flex flex-col items-center justify-center p-8 animate-entrance text-center">
+            <!-- Checkmark Gigante -->
+            <div class="w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-xl" [ngClass]="isDarkMode ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-500'">
+              <svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            
+            <h2 class="text-3xl font-extrabold mb-2" [ngClass]="isDarkMode ? 'text-white' : 'text-gray-900'">Payment Successful!</h2>
+            <p class="font-medium text-lg mb-8" [ngClass]="isDarkMode ? 'text-zinc-300' : 'text-gray-600'">
+              Order <span class="font-bold text-rose-500">{{ orderNumber() }}</span> is confirmed.
+            </p>
+            
+            <div class="p-4 rounded-xl border text-sm font-medium w-full max-w-sm mb-10 text-left" [ngClass]="isDarkMode ? 'bg-zinc-900 border-zinc-800 text-zinc-400' : 'bg-gray-50 border-gray-200 text-gray-500'">
+              Your host will prepare the order and notify you upon arrival. Delivery time is estimated at 35-45 minutes.
+            </div>
+
+            <button (click)="closeCart()" class="w-full max-w-sm py-3.5 rounded-2xl font-bold text-base transition-transform hover:scale-[1.01] active:scale-95 border"
+                    [ngClass]="isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700' : 'bg-gray-900 border-gray-800 text-white'">
+              Back to Home
+            </button>
+          </div>
+        }
+
+      }
     </div>
   }
 
