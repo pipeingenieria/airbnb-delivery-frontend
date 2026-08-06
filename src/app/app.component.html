@@ -100,9 +100,9 @@
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
             </button>
           </div>
-          <div class="flex overflow-x-auto gap-4 px-4 md:px-8 pb-4 snap-x snap-mandatory scrollbar-hide">
+          <div class="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scrollbar-hide">
             @for (item of restaurantsList(); track item.id) {
-              <div (click)="openEstablishment(item)" class="min-w-[260px] w-[260px] snap-start flex flex-col gap-3 cursor-pointer group">
+              <div (click)="openEstablishment(item)" class="min-w-[260px] w-[260px] snap-start flex flex-col gap-3 cursor-pointer group first:ml-4 md:first:ml-8 last:mr-4 md:last:mr-8">
                 <div class="w-full aspect-[4/3] relative overflow-hidden rounded-xl">
                   <img [src]="item.imageUrl" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                   <button class="absolute top-3 right-3 p-1 rounded-full hover:bg-white/20 transition-colors">
@@ -132,9 +132,9 @@
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
             </button>
           </div>
-          <div class="flex overflow-x-auto gap-4 px-4 md:px-8 pb-4 snap-x snap-mandatory scrollbar-hide">
+          <div class="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scrollbar-hide">
             @for (item of liquorList(); track item.id) {
-              <div (click)="openEstablishment(item)" class="min-w-[260px] w-[260px] snap-start flex flex-col gap-3 cursor-pointer group">
+              <div (click)="openEstablishment(item)" class="min-w-[260px] w-[260px] snap-start flex flex-col gap-3 cursor-pointer group first:ml-4 md:first:ml-8 last:mr-4 md:last:mr-8">
                 <div class="w-full aspect-[4/3] relative overflow-hidden rounded-xl">
                   <img [src]="item.imageUrl" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                   <button class="absolute top-3 right-3 p-1 rounded-full hover:bg-white/20 transition-colors">
@@ -164,9 +164,9 @@
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
             </button>
           </div>
-          <div class="flex overflow-x-auto gap-4 px-4 md:px-8 pb-4 snap-x snap-mandatory scrollbar-hide">
+          <div class="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scrollbar-hide">
             @for (item of pharmacyList(); track item.id) {
-              <div (click)="openEstablishment(item)" class="min-w-[260px] w-[260px] snap-start flex flex-col gap-3 cursor-pointer group">
+              <div (click)="openEstablishment(item)" class="min-w-[260px] w-[260px] snap-start flex flex-col gap-3 cursor-pointer group first:ml-4 md:first:ml-8 last:mr-4 md:last:mr-8">
                 <div class="w-full aspect-[4/3] relative overflow-hidden rounded-xl">
                   <img [src]="item.imageUrl" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                   <button class="absolute top-3 right-3 p-1 rounded-full hover:bg-white/20 transition-colors">
@@ -359,7 +359,6 @@
           </div>
         }
 
-        <!-- PASO 2: DETALLES Y TIEMPOS DE ENTREGA -->
         <!-- PASO 2: DETALLES Y TIEMPOS DE ENTREGA (ACTUALIZADO) -->
         @case ('details') {
           <div class="px-4 py-4 flex items-center border-b" [ngClass]="isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-200'">
