@@ -49,6 +49,8 @@ export class AppComponent {
   checkoutStep = signal<'cart' | 'details' | 'processing' | 'success'>('cart');
   orderNumber = signal<string>('');
 
+  activeOrder = signal<any>(null); // Guarda el estado del pedido despachado
+
   cartTotal = computed(() => this.cart().reduce((acc, item) => acc + (item.price * item.quantity), 0));
   cartCount = computed(() => this.cart().reduce((acc, item) => acc + item.quantity, 0));
 
@@ -224,16 +226,23 @@ showToast(message: string) {
     this.checkoutStep.set('cart');
   }
 
-  processPayment() {
-    this.checkoutStep.set('processing');
+  finishOrderAndGoHome() {
+    // 1. Guardamos que hay un pedido activo
+    this.activeOrder.set({ number: this.orderNumber(), status: 'dispatching' });
     
-    // Simulamos la pasarela de pagos (3 segundos de carga)
+    // 2. Cerramos la vista del establecimiento para volver al "Home" principal
+    this.selectedEstablishment.set(null);
+    
+    // 3. Cerramos el carrito
+    this.isCartOpen.set(false);
+    
+    // 4. Reiniciamos el estado del checkout por debajo para la próxima compra
     setTimeout(() => {
-      // Generamos un número de orden aleatorio
-      this.orderNumber.set('ORD-' + Math.floor(10000 + Math.random() * 90000));
-      this.checkoutStep.set('success');
-      this.cart.set([]); // Vaciamos el carrito silenciosamente
-    }, 3000);
+      this.checkoutStep.set('cart');
+    }, 300);
+    
+    // 5. Disparamos el Toast para confirmar el despacho
+    this.showToast('🎉 Your order is being dispatched!');
   }
 
   formatPrice(price: number): string {

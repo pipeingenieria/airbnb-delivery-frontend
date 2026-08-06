@@ -72,3 +72,15 @@
   /* La magia está en este cubic-bezier que simula el rebote físico */
   animation: toastSpring 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
+
+/* Animación para guiar la vista hacia el icono de Pedidos Activos */
+@keyframes navItemPulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(244, 63, 94, 0)); }
+  50% { transform: scale(1.15); filter: drop-shadow(0 0 10px rgba(244, 63, 94, 0.7)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(244, 63, 94, 0)); }
+}
+
+.nav-pulse {
+  animation: navItemPulse 1.8s infinite ease-in-out;
+  color: #f43f5e !important; /* Forza el color coral de la marca */
+}
