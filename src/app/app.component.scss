@@ -84,3 +84,53 @@
   animation: navItemPulse 1.8s infinite ease-in-out;
   color: #f43f5e !important; /* Forza el color coral de la marca */
 }
+
+/* ========================================== */
+/* ANIMACIÓN MASTER: MORPH & FLY TO ICON      */
+/* ========================================== */
+
+@keyframes morphAndDrop {
+  0% {
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 220px;
+    height: 44px;
+    border-radius: 22px;
+    opacity: 1;
+  }
+  20% {
+    /* Se encoge a una bolita */
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    opacity: 1;
+  }
+  100% {
+    /* Cae hacia el 3er icono (aprox 65% del ancho de la pantalla) y desaparece */
+    top: calc(100vh - 35px);
+    left: 65%;
+    transform: translateX(-50%) scale(0.2);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    opacity: 0;
+  }
+}
+
+@keyframes vanishText {
+  0% { opacity: 1; }
+  15% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+.animate-morph-fly {
+  animation: morphAndDrop 1.2s cubic-bezier(0.5, 0, 0.2, 1) forwards;
+}
+
+.animate-vanish-text {
+  animation: vanishText 1.2s forwards;
+}

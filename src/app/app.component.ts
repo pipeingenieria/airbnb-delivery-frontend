@@ -50,6 +50,7 @@ export class AppComponent {
   orderNumber = signal<string>('');
 
   activeOrder = signal<any>(null); // Guarda el estado del pedido despachado
+  isOrderFlying = signal<boolean>(false); // Disparador de la magia
 
   cartTotal = computed(() => this.cart().reduce((acc, item) => acc + (item.price * item.quantity), 0));
   cartCount = computed(() => this.cart().reduce((acc, item) => acc + item.quantity, 0));
@@ -239,22 +240,21 @@ showToast(message: string) {
   }
 
   finishOrderAndGoHome() {
-    // 1. Guardamos que hay un pedido activo
     this.activeOrder.set({ number: this.orderNumber(), status: 'dispatching' });
-    
-    // 2. Cerramos la vista del establecimiento para volver al "Home" principal
     this.selectedEstablishment.set(null);
-    
-    // 3. Cerramos el carrito
     this.isCartOpen.set(false);
     
-    // 4. Reiniciamos el estado del checkout por debajo para la próxima compra
     setTimeout(() => {
       this.checkoutStep.set('cart');
     }, 300);
     
-    // 5. Disparamos el Toast para confirmar el despacho
-    this.showToast('🎉 Your order is being dispatched!');
+    // En lugar del Toast normal, disparamos la bola de luz
+    this.isOrderFlying.set(true);
+    
+    // Apagamos la animación justo cuando la bolita "choca" con el icono (1.2 segundos)
+    setTimeout(() => {
+      this.isOrderFlying.set(false);
+    }, 1200);
   }
 
   formatPrice(price: number): string {
