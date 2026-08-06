@@ -101,8 +101,10 @@
             </button>
           </div>
           <div class="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scrollbar-hide">
-            @for (item of restaurantsList(); track item.id) {
-              <div (click)="openEstablishment(item)" class="min-w-[260px] w-[260px] snap-start flex flex-col gap-3 cursor-pointer group first:ml-4 md:first:ml-8 last:mr-4 md:last:mr-8">
+            <!-- Usamos $first y $last de Angular -->
+            @for (item of restaurantsList(); track item.id; let isFirst = $first; let isLast = $last) {
+              <div (click)="openEstablishment(item)" class="min-w-[260px] w-[260px] snap-start flex flex-col gap-3 cursor-pointer group transition-all"
+                   [ngClass]="{'ml-4 md:ml-8': isFirst, 'mr-4 md:mr-8': isLast}">
                 <div class="w-full aspect-[4/3] relative overflow-hidden rounded-xl">
                   <img [src]="item.imageUrl" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                   <button class="absolute top-3 right-3 p-1 rounded-full hover:bg-white/20 transition-colors">
@@ -133,8 +135,9 @@
             </button>
           </div>
           <div class="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scrollbar-hide">
-            @for (item of liquorList(); track item.id) {
-              <div (click)="openEstablishment(item)" class="min-w-[260px] w-[260px] snap-start flex flex-col gap-3 cursor-pointer group first:ml-4 md:first:ml-8 last:mr-4 md:last:mr-8">
+            @for (item of liquorList(); track item.id; let isFirst = $first; let isLast = $last) {
+              <div (click)="openEstablishment(item)" class="min-w-[260px] w-[260px] snap-start flex flex-col gap-3 cursor-pointer group transition-all"
+                   [ngClass]="{'ml-4 md:ml-8': isFirst, 'mr-4 md:mr-8': isLast}">
                 <div class="w-full aspect-[4/3] relative overflow-hidden rounded-xl">
                   <img [src]="item.imageUrl" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                   <button class="absolute top-3 right-3 p-1 rounded-full hover:bg-white/20 transition-colors">
@@ -165,8 +168,9 @@
             </button>
           </div>
           <div class="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scrollbar-hide">
-            @for (item of pharmacyList(); track item.id) {
-              <div (click)="openEstablishment(item)" class="min-w-[260px] w-[260px] snap-start flex flex-col gap-3 cursor-pointer group first:ml-4 md:first:ml-8 last:mr-4 md:last:mr-8">
+            @for (item of pharmacyList(); track item.id; let isFirst = $first; let isLast = $last) {
+              <div (click)="openEstablishment(item)" class="min-w-[260px] w-[260px] snap-start flex flex-col gap-3 cursor-pointer group transition-all"
+                   [ngClass]="{'ml-4 md:ml-8': isFirst, 'mr-4 md:mr-8': isLast}">
                 <div class="w-full aspect-[4/3] relative overflow-hidden rounded-xl">
                   <img [src]="item.imageUrl" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                   <button class="absolute top-3 right-3 p-1 rounded-full hover:bg-white/20 transition-colors">
