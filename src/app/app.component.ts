@@ -226,6 +226,18 @@ showToast(message: string) {
     this.checkoutStep.set('cart');
   }
 
+  processPayment() {
+    this.checkoutStep.set('processing');
+    
+    // Simulamos la pasarela de pagos (3 segundos de carga)
+    setTimeout(() => {
+      // Generamos un número de orden aleatorio
+      this.orderNumber.set('ORD-' + Math.floor(10000 + Math.random() * 90000));
+      this.checkoutStep.set('success');
+      this.cart.set([]); // Vaciamos el carrito silenciosamente
+    }, 3000);
+  }
+
   finishOrderAndGoHome() {
     // 1. Guardamos que hay un pedido activo
     this.activeOrder.set({ number: this.orderNumber(), status: 'dispatching' });
