@@ -100,11 +100,9 @@
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
             </button>
           </div>
-          <div class="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scrollbar-hide">
+          <!-- Aplicamos pl-4 y md:pl-8 directamente al contenedor de scroll -->
+          <div class="flex overflow-x-auto pl-4 md:pl-8 gap-4 pb-4 snap-x snap-mandatory scrollbar-hide">
             
-            <!-- Espaciador Frontal Invisible -->
-            <div class="w-0 md:w-4 shrink-0"></div>
-
             @for (item of restaurantsList(); track item.id) {
               <div (click)="openEstablishment(item)" class="min-w-[260px] w-[260px] snap-start flex flex-col gap-3 cursor-pointer group">
                 <div class="w-full aspect-[4/3] relative overflow-hidden rounded-xl">
@@ -126,8 +124,8 @@
               </div>
             }
 
-            <!-- Espaciador Trasero Invisible -->
-            <div class="w-0 md:w-4 shrink-0"></div>
+            <!-- Espaciador Trasero Infalible (Obliga a Safari a no colapsar el gap final) -->
+            <div class="min-w-[4px] md:min-w-[16px] shrink-0"></div>
 
           </div>
         </div>
@@ -140,11 +138,8 @@
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
             </button>
           </div>
-          <div class="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scrollbar-hide">
+          <div class="flex overflow-x-auto pl-4 md:pl-8 gap-4 pb-4 snap-x snap-mandatory scrollbar-hide">
             
-            <!-- Espaciador Frontal Invisible -->
-            <div class="w-0 md:w-4 shrink-0"></div>
-
             @for (item of liquorList(); track item.id) {
               <div (click)="openEstablishment(item)" class="min-w-[260px] w-[260px] snap-start flex flex-col gap-3 cursor-pointer group">
                 <div class="w-full aspect-[4/3] relative overflow-hidden rounded-xl">
@@ -166,8 +161,7 @@
               </div>
             }
 
-            <!-- Espaciador Trasero Invisible -->
-            <div class="w-0 md:w-4 shrink-0"></div>
+            <div class="min-w-[4px] md:min-w-[16px] shrink-0"></div>
 
           </div>
         </div>
@@ -180,11 +174,8 @@
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
             </button>
           </div>
-          <div class="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scrollbar-hide">
+          <div class="flex overflow-x-auto pl-4 md:pl-8 gap-4 pb-4 snap-x snap-mandatory scrollbar-hide">
             
-            <!-- Espaciador Frontal Invisible -->
-            <div class="w-0 md:w-4 shrink-0"></div>
-
             @for (item of pharmacyList(); track item.id) {
               <div (click)="openEstablishment(item)" class="min-w-[260px] w-[260px] snap-start flex flex-col gap-3 cursor-pointer group">
                 <div class="w-full aspect-[4/3] relative overflow-hidden rounded-xl">
@@ -206,8 +197,7 @@
               </div>
             }
 
-            <!-- Espaciador Trasero Invisible -->
-            <div class="w-0 md:w-4 shrink-0"></div>
+            <div class="min-w-[4px] md:min-w-[16px] shrink-0"></div>
 
           </div>
         </div>
