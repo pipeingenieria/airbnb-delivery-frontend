@@ -254,7 +254,7 @@ showToast(message: string) {
     // Apagamos la animación justo cuando la bolita "choca" con el icono (1.2 segundos)
     setTimeout(() => {
       this.isOrderFlying.set(false);
-    }, 1200);
+    }, 3000);
   }
 
   formatPrice(price: number): string {

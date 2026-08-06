@@ -90,7 +90,8 @@
 /* ========================================== */
 
 @keyframes morphAndDrop {
-  0% {
+  /* Se queda quieto como mensaje durante el 50% del tiempo */
+  0%, 50% {
     top: 24px;
     left: 50%;
     transform: translateX(-50%);
@@ -99,8 +100,8 @@
     border-radius: 22px;
     opacity: 1;
   }
-  20% {
-    /* Se encoge a una bolita */
+  /* Se encoge a una bolita */
+  65% {
     top: 60px;
     left: 50%;
     transform: translateX(-50%);
@@ -109,8 +110,8 @@
     border-radius: 50%;
     opacity: 1;
   }
+  /* Cae hacia el icono de orders */
   100% {
-    /* Cae hacia el 3er icono (aprox 65% del ancho de la pantalla) y desaparece */
     top: calc(100vh - 35px);
     left: 65%;
     transform: translateX(-50%) scale(0.2);
@@ -122,15 +123,16 @@
 }
 
 @keyframes vanishText {
-  0% { opacity: 1; }
-  15% { opacity: 0; }
-  100% { opacity: 0; }
+  /* El texto se mantiene visible hasta el 45% del tiempo */
+  0%, 45% { opacity: 1; }
+  55%, 100% { opacity: 0; }
 }
 
+/* Le subimos la duración a 2.5 segundos para que se pueda leer con calma */
 .animate-morph-fly {
-  animation: morphAndDrop 1.2s cubic-bezier(0.5, 0, 0.2, 1) forwards;
+  animation: morphAndDrop 2.5s cubic-bezier(0.5, 0, 0.2, 1) forwards;
 }
 
 .animate-vanish-text {
-  animation: vanishText 1.2s forwards;
+  animation: vanishText 2.5s forwards;
 }
