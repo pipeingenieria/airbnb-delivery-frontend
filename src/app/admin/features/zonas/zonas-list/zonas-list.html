@@ -1,0 +1,136 @@
+<div class="space-y-6 pb-20 animate-entrance">
+  <!-- Cabecera Responsive (Mobile & Desktop) -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Zonas Geográficas</h2>
+      <p class="text-xs sm:text-sm text-slate-400 mt-1">Nodos y complejos de edificios habilitados para entrega.</p>
+    </div>
+    <button (click)="abrirModalCrear()" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 sm:py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-rose-600 to-rose-500 text-white shadow-lg shadow-rose-600/30 hover:from-rose-500 hover:to-rose-400 transition-all transform active:scale-95 border border-rose-400/30">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+      Nueva Zona
+    </button>
+  </div>
+
+  <!-- Grid adaptable para móviles y PC -->
+  @if (cargando()) {
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      @for (i of [1, 2, 3]; track i) {
+        <div class="h-44 rounded-2xl bg-slate-900/60 border border-slate-800 animate-pulse"></div>
+      }
+    </div>
+  } @else if (zonas().length === 0) {
+    <div class="text-center py-16 px-4 rounded-3xl bg-slate-900/40 border border-slate-800/80 backdrop-blur-md">
+      <div class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-slate-800/80 flex items-center justify-center text-slate-400">
+        📍
+      </div>
+      <h3 class="text-base sm:text-lg font-bold text-white mb-1">Sin zonas registradas</h3>
+      <p class="text-xs sm:text-sm text-slate-400 max-w-sm mx-auto mb-6">Crea tu primer nodo geográfico para empezar a recibir pedidos por geocercas.</p>
+    </div>
+  } @else {
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      @for (zona of zonas(); track zona.id) {
+        <div class="group relative rounded-2xl bg-slate-900/80 border border-slate-800/80 hover:border-rose-500/50 p-5 sm:p-6 shadow-xl backdrop-blur-xl transition-all duration-300">
+          <div class="flex justify-between items-start mb-4">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-center text-rose-400 font-bold text-base sm:text-lg">
+              🏢
+            </div>
+            @if (zona.activo) {
+              <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Activo</span>
+            } @else {
+              <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">Inactivo</span>
+            }
+          </div>
+
+          <h3 class="text-lg sm:text-xl font-bold text-white tracking-tight mb-1">{{ zona.nombre }}</h3>
+          <p class="text-xs sm:text-sm font-medium text-slate-400 flex items-center gap-1.5 mb-6">
+            <svg class="w-4 h-4 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
+            {{ zona.ciudad }}
+          </p>
+
+          <div class="flex items-center justify-between pt-4 border-t border-slate-800/80 text-xs font-semibold text-slate-400">
+            <span>ID: #{{ zona.id }}</span>
+            <div class="flex items-center gap-3">
+              <button class="hover:text-rose-400 transition-colors py-1">Editar</button>
+              <button class="hover:text-rose-500 transition-colors py-1">Eliminar</button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ========================================== -->
+  <!-- MODAL INTERACTIVO CON MAPA Y FORMULARIO -->
+  <!-- ========================================== -->
+  @if (modalAbierto()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-entrance">
+      <div class="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        
+        <!-- Header del Modal -->
+        <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/40">
+          <h3 class="text-lg font-bold text-white">Registrar Nueva Zona con Mapa</h3>
+          <button (click)="cerrarModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+
+        <!-- Cuerpo del Modal (Scrollable en móviles) -->
+        <div class="p-6 overflow-y-auto space-y-5">
+          
+          <!-- Formulario de campos -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Nombre del Edificio / Nodo</label>
+              <input type="text" [(ngModel)]="nuevaZona().nombre" placeholder="Ej: Loft El Poblado" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-rose-500 transition-colors">
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Ciudad / Sector</label>
+              <input type="text" [(ngModel)]="nuevaZona().ciudad" placeholder="Ej: Medellín" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-rose-500 transition-colors">
+            </div>
+          </div>
+
+          <!-- MAPA INTERACTIVO INTEGRADO -->
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <label class="text-xs font-bold uppercase tracking-wider text-slate-400">Seleccionar ubicación en el mapa</label>
+              <span class="text-[11px] text-rose-400 font-medium">Arrastra o haz clic para ubicar el marcador</span>
+            </div>
+            
+            <div class="relative w-full h-56 rounded-2xl overflow-hidden border border-slate-800 shadow-inner bg-slate-950">
+              <!-- Widget iframe de OpenStreetMap centrado en Medellín/Bello -->
+              <iframe 
+                width="100%" 
+                height="100%" 
+                frameborder="0" 
+                scrolling="no" 
+                marginheight="0" 
+                marginwidth="0" 
+                src="https://www.openstreetmap.org/export/embed.html?bbox=-75.60%2C6.20%2C-75.52%2C6.30&amp;layer=mapnik&amp;marker=6.25184%2C-75.56359" 
+                style="border: 0; filter: invert(90%) hue-rotate(180deg) brightness(95%) contrast(90%);">
+              </iframe>
+              
+              <!-- Marcador visual central de referencia -->
+              <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div class="w-6 h-6 rounded-full bg-rose-500/30 flex items-center justify-center animate-ping">
+                  <div class="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Footer del Modal -->
+        <div class="px-6 py-4 border-t border-slate-800 bg-slate-950/40 flex justify-end gap-3">
+          <button (click)="cerrarModal()" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white transition-colors">
+            Cancelar
+          </button>
+          <button (click)="guardarZona()" class="px-6 py-2.5 rounded-xl text-sm font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/30 transition-all">
+            Guardar Zona
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+</div>

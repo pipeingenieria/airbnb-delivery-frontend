@@ -1,0 +1,138 @@
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-entrance {
+  animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-entrance {
+  animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Animación de latido para el modo oscuro (Verde Esmeralda) */
+@keyframes pulseEmerald {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+  70% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* Animación de latido para el modo claro (Coral/Rosa Airbnb) */
+@keyframes pulseRose {
+  0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.6); }
+  70% { box-shadow: 0 0 0 12px rgba(244, 63, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
+}
+
+.glow-emerald { animation: pulseEmerald 2s infinite cubic-bezier(0.66, 0, 0, 1); }
+.glow-rose { animation: pulseRose 2s infinite cubic-bezier(0.66, 0, 0, 1); }
+
+/* Animación de latido para el botón oscuro (Modo Claro) */
+@keyframes pulseDark {
+  0% { box-shadow: 0 0 0 0 rgba(17, 24, 39, 0.7); }
+  70% { box-shadow: 0 0 0 14px rgba(17, 24, 39, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(17, 24, 39, 0); }
+}
+
+.glow-dark { 
+  animation: pulseDark 2s infinite cubic-bezier(0.66, 0, 0, 1); 
+}
+
+/* Animación tipo Spring (Resorte iOS) para el Popup */
+@keyframes toastSpring {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -40px) scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.animate-toast-premium {
+  /* La magia está en este cubic-bezier que simula el rebote físico */
+  animation: toastSpring 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Animación para guiar la vista hacia el icono de Pedidos Activos */
+@keyframes navItemPulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(244, 63, 94, 0)); }
+  50% { transform: scale(1.15); filter: drop-shadow(0 0 10px rgba(244, 63, 94, 0.7)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(244, 63, 94, 0)); }
+}
+
+.nav-pulse {
+  animation: navItemPulse 1.8s infinite ease-in-out;
+  color: #f43f5e !important; /* Forza el color coral de la marca */
+}
+
+/* ========================================== */
+/* ANIMACIÓN MASTER: MORPH & FLY TO ICON      */
+/* ========================================== */
+
+@keyframes morphAndDrop {
+  /* Se queda quieto como mensaje durante el 50% del tiempo */
+  0%, 50% {
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 220px;
+    height: 44px;
+    border-radius: 22px;
+    opacity: 1;
+  }
+  /* Se encoge a una bolita */
+  65% {
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    opacity: 1;
+  }
+  /* Cae hacia el icono de orders */
+  100% {
+    top: calc(100vh - 35px);
+    left: 65%;
+    transform: translateX(-50%) scale(0.2);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    opacity: 0;
+  }
+}
+
+@keyframes vanishText {
+  /* El texto se mantiene visible hasta el 45% del tiempo */
+  0%, 45% { opacity: 1; }
+  55%, 100% { opacity: 0; }
+}
+
+/* Le subimos la duración a 2.5 segundos para que se pueda leer con calma */
+.animate-morph-fly {
+  animation: morphAndDrop 2.5s cubic-bezier(0.5, 0, 0.2, 1) forwards;
+}
+
+.animate-vanish-text {
+  animation: vanishText 2.5s forwards;
+}
