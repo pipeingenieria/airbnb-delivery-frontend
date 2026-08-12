@@ -19,7 +19,7 @@ export class ZonasList implements OnInit, AfterViewInit {
   
   busquedaDireccion = signal<string>('');
   modalAbierto = signal<boolean>(false);
-  editandoId = signal<number | null>(null); // Para saber si estamos editando
+  editandoId = signal<number | null>(null); 
   
   nuevaZona = signal<Zona>({
     nombre: '',
@@ -50,12 +50,21 @@ export class ZonasList implements OnInit, AfterViewInit {
       this.map.remove();
     }
     
-    this.map = L.map('geocercas-map', { zoomControl: false }).setView([6.3373, -75.5579], 12);
+    // Motor optimizado
+    this.map = L.map('geocercas-map', { 
+      zoomControl: false,
+      preferCanvas: true,
+      wheelDebounceTime: 150
+    }).setView([6.3373, -75.5579], 12);
+    
     L.control.zoom({ position: 'bottomright' }).addTo(this.map);
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OpenStreetMap',
-      maxZoom: 19
+      maxZoom: 19,
+      keepBuffer: 6,
+      updateWhenIdle: false,
+      updateWhenZooming: false
     }).addTo(this.map);
 
     this.markersLayer.addTo(this.map);
@@ -64,23 +73,10 @@ export class ZonasList implements OnInit, AfterViewInit {
       this.abrirModalCrear(e.latlng.lat, e.latlng.lng);
     });
 
-    // FIX: Obligamos a que pinte los marcadores DESPUÉS de que el mapa exista físicamente
     setTimeout(() => {
       this.map.invalidateSize();
       this.actualizarMarcadoresEnMapa(); 
     }, 200);
-  }
-
-  // FIX: Validación para zonas antiguas sin coordenadas
-  centrarEnZona(zona: Zona) {
-    const lat = Number(zona.latitud);
-    const lng = Number(zona.longitud);
-    
-    if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-      this.map.flyTo([lat, lng], 15, { duration: 1.5 });
-    } else {
-      alert(`La zona "${zona.nombre}" no tiene coordenadas asignadas en la Base de Datos. Por favor, dale clic a Editar (el lápiz) y ubícala en el mapa.`);
-    }
   }
 
   actualizarMarcadoresEnMapa() {
@@ -88,11 +84,10 @@ export class ZonasList implements OnInit, AfterViewInit {
     this.markersLayer.clearLayers();
 
     this.zonas().forEach((zona) => {
-      // Parseo estricto a Number por si FastAPI manda los decimales como strings
       const lat = Number(zona.latitud);
       const lng = Number(zona.longitud);
       
-      if (!isNaN(lat) && !isNaN(lng) && lat !== 0) {
+      if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
         const radio = Number(zona.radio) || 1000;
 
         const circle = L.circle([lat, lng], {
@@ -122,22 +117,24 @@ export class ZonasList implements OnInit, AfterViewInit {
         this.cargando.set(false);
         this.actualizarMarcadoresEnMapa();
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Error al cargar zonas:', err);
         this.cargando.set(false);
       }
     });
   }
 
-  // --- NUEVAS FUNCIONES DE EXPERIENCIA (CENTRAR, EDITAR, ELIMINAR) ---
-  
-  // centrarEnZona(zona: Zona) {
-  //   const lat = Number(zona.latitud);
-  //   const lng = Number(zona.longitud);
-  //   if (!isNaN(lat) && !isNaN(lng)) {
-  //     this.map.flyTo([lat, lng], 15, { duration: 1.5 });
-  //   }
-  // }
+  // --- SOLUCIÓN: FUNCIÓN CENTRAR RESTAURADA ---
+  centrarEnZona(zona: Zona) {
+    const lat = Number(zona.latitud);
+    const lng = Number(zona.longitud);
+    
+    if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+      this.map.flyTo([lat, lng], 15, { duration: 1.5 });
+    } else {
+      alert(`La zona "${zona.nombre}" no tiene coordenadas asignadas en la Base de Datos. Por favor, dale clic a Editar (el lápiz) y ubícala en el mapa.`);
+    }
+  }
 
   editarZona(zona: Zona, event: Event) {
     event.stopPropagation();
@@ -161,18 +158,15 @@ export class ZonasList implements OnInit, AfterViewInit {
     event.stopPropagation();
     if (confirm(`¿Estás completamente seguro de eliminar la zona "${zona.nombre}"? Esto dejará sin cobertura a los edificios asociados.`)) {
       if (zona.id) {
-        // Asegúrate de tener deleteZona en tu AdminService
         this.adminService.deleteZona(zona.id).subscribe({
           next: () => {
             this.cargarZonas();
           },
-          error: (err) => alert('Error al eliminar la zona.')
+          error: (err: any) => alert('Error al eliminar la zona.')
         });
       }
     }
   }
-
-  // --- BUSCADOR Y LÓGICA DEL MAPA ---
 
   async buscarEnMapa() {
     const query = this.busquedaDireccion();
@@ -241,10 +235,20 @@ export class ZonasList implements OnInit, AfterViewInit {
   initMiniMap(lat: number, lng: number) {
     if (this.miniMap) this.miniMap.remove();
 
-    this.miniMap = L.map('minimap', { zoomControl: false }).setView([lat, lng], 14);
-    L.control.zoom({ position: 'bottomright' }).addTo(this.miniMap);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(this.miniMap);
+    this.miniMap = L.map('minimap', { 
+      zoomControl: false,
+      preferCanvas: true,
+      wheelDebounceTime: 150 
+    }).setView([lat, lng], 14);
     
+    L.control.zoom({ position: 'bottomright' }).addTo(this.miniMap);
+    
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      keepBuffer: 6,
+      updateWhenIdle: false,
+      updateWhenZooming: false
+    }).addTo(this.miniMap);
+
     const pinIcon = L.divIcon({
       className: 'custom-map-pin',
       html: `<div style="background-color: #f43f5e; width: 16px; height: 16px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 15px #f43f5e;"></div>`,
@@ -277,15 +281,13 @@ export class ZonasList implements OnInit, AfterViewInit {
   guardarZona() {
     const zonaData = this.nuevaZona();
     
-    // Si estamos editando usamos PUT, si no, POST
     if (this.editandoId()) {
-      // Asegúrate de tener updateZona en tu AdminService
       this.adminService.updateZona(this.editandoId()!, zonaData).subscribe({
         next: () => {
           this.cargarZonas();
           this.cerrarModal();
         },
-        error: (err) => console.error('Error al actualizar zona:', err)
+        error: (err: any) => console.error('Error al actualizar zona:', err)
       });
     } else {
       this.adminService.createZona(zonaData).subscribe({
@@ -293,7 +295,7 @@ export class ZonasList implements OnInit, AfterViewInit {
           this.cargarZonas();
           this.cerrarModal();
         },
-        error: (err) => console.error('Error al crear zona:', err)
+        error: (err: any) => console.error('Error al crear zona:', err)
       });
     }
   }
