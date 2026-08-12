@@ -1,135 +1,127 @@
-<div class="space-y-6 pb-20 animate-entrance">
-  <!-- Cabecera Responsive (Mobile & Desktop) -->
-  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-    <div>
-      <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Zonas Geográficas</h2>
-      <p class="text-xs sm:text-sm text-slate-400 mt-1">Nodos y complejos de edificios habilitados para entrega.</p>
+<div class="space-y-4 lg:space-y-6 flex flex-col h-full min-h-0 animate-entrance pb-6 lg:pb-0">
+  
+  <!-- CABECERA Y BUSCADOR -->
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 shrink-0">
+    <div class="flex-1">
+      <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Centro de Geocercas</h2>
+      <p class="text-xs sm:text-sm text-slate-400 mt-1">Dibuja polígonos de cobertura para asignar restaurantes.</p>
     </div>
-    <button (click)="abrirModalCrear()" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 sm:py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-rose-600 to-rose-500 text-white shadow-lg shadow-rose-600/30 hover:from-rose-500 hover:to-rose-400 transition-all transform active:scale-95 border border-rose-400/30">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
-      Nueva Zona
-    </button>
+
+    <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+      <div class="relative w-full sm:w-72 lg:w-80">
+        <input type="text" [(ngModel)]="busquedaDireccion" (keyup.enter)="buscarEnMapa()" placeholder="Buscar barrio o dirección..." class="w-full pl-10 pr-16 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-400 text-sm focus:outline-none focus:border-rose-500 transition-all shadow-md">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </div>
+        <button (click)="buscarEnMapa()" class="absolute inset-y-1.5 right-1.5 px-3 bg-rose-600 hover:bg-rose-500 rounded-lg text-white text-[10px] font-bold uppercase tracking-wider transition-colors">Volar</button>
+      </div>
+
+      <button (click)="abrirModalCrear()" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-rose-600 to-rose-500 text-white shadow-lg shadow-rose-600/30 hover:from-rose-500 active:scale-95 border border-rose-400/30 shrink-0">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+        Nueva Geocerca
+      </button>
+    </div>
   </div>
 
-  <!-- Grid adaptable para móviles y PC -->
-  @if (cargando()) {
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-      @for (i of [1, 2, 3]; track i) {
-        <div class="h-44 rounded-2xl bg-slate-900/60 border border-slate-800 animate-pulse"></div>
-      }
+  <!-- CONTENEDOR FLEX: Altura dinámica garantizada -->
+  <div class="flex-1 flex flex-col lg:flex-row gap-6 min-h-0">
+    
+    <!-- MAPA INTERACTIVO LEAFLET (Corregido) -->
+    <div class="flex-1 relative rounded-3xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900 min-h-[50vh] lg:min-h-0">
+      <!-- Usamos absolute inset-0 para que Leaflet sepa exactamente cuánto mide su padre -->
+      <div id="geocercas-map" class="absolute inset-0 z-10"></div>
     </div>
-  } @else if (zonas().length === 0) {
-    <div class="text-center py-16 px-4 rounded-3xl bg-slate-900/40 border border-slate-800/80 backdrop-blur-md">
-      <div class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-slate-800/80 flex items-center justify-center text-slate-400">
-        📍
+
+    <!-- PANEL LATERAL SCROLLABLE -->
+    <div class="w-full lg:w-[350px] shrink-0 bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-5 flex flex-col shadow-xl max-h-[50vh] lg:max-h-full">
+      <div class="flex justify-between items-center mb-4 px-1">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">Zonas Activas</h3>
+        <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold">{{ zonas().length }}</span>
       </div>
-      <h3 class="text-base sm:text-lg font-bold text-white mb-1">Sin zonas registradas</h3>
-      <p class="text-xs sm:text-sm text-slate-400 max-w-sm mx-auto mb-6">Crea tu primer nodo geográfico para empezar a recibir pedidos por geocercas.</p>
-    </div>
-  } @else {
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-      @for (zona of zonas(); track zona.id) {
-        <div class="group relative rounded-2xl bg-slate-900/80 border border-slate-800/80 hover:border-rose-500/50 p-5 sm:p-6 shadow-xl backdrop-blur-xl transition-all duration-300">
-          <div class="flex justify-between items-start mb-4">
-            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-center text-rose-400 font-bold text-base sm:text-lg">
-              🏢
-            </div>
-            @if (zona.activo) {
-              <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Activo</span>
-            } @else {
-              <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">Inactivo</span>
-            }
+      
+      <div class="flex-1 overflow-y-auto space-y-3 pr-1">
+        @if (cargando()) {
+          @for (i of [1, 2, 3]; track i) {
+            <div class="h-24 rounded-2xl bg-slate-800/50 animate-pulse"></div>
+          }
+        } @else if (zonas().length === 0) {
+          <div class="text-center py-10 text-slate-500 text-sm bg-slate-950/40 rounded-2xl border border-slate-800 border-dashed">
+            Aún no hay geocercas en tu base de datos.
           </div>
-
-          <h3 class="text-lg sm:text-xl font-bold text-white tracking-tight mb-1">{{ zona.nombre }}</h3>
-          <p class="text-xs sm:text-sm font-medium text-slate-400 flex items-center gap-1.5 mb-6">
-            <svg class="w-4 h-4 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
-            {{ zona.ciudad }}
-          </p>
-
-          <div class="flex items-center justify-between pt-4 border-t border-slate-800/80 text-xs font-semibold text-slate-400">
-            <span>ID: #{{ zona.id }}</span>
-            <div class="flex items-center gap-3">
-              <button class="hover:text-rose-400 transition-colors py-1">Editar</button>
-              <button class="hover:text-rose-500 transition-colors py-1">Eliminar</button>
+        } @else {
+          @for (zona of zonas(); track zona.id) {
+            <!-- Mismo contenido que ya tenías para la tarjeta de zona -->
+            <div class="group p-4 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-rose-500/50 transition-all flex flex-col gap-3">
+              <div class="flex justify-between items-start">
+                <div>
+                  <div class="flex items-center gap-2 mb-0.5">
+                    <span class="w-2 h-2 rounded-full" [ngClass]="zona.activo ? 'bg-emerald-500' : 'bg-rose-500'"></span>
+                    <h4 class="font-bold text-white text-sm">{{ zona.nombre }}</h4>
+                  </div>
+                  <p class="text-[11px] text-slate-400 leading-tight pr-2">{{ zona.ciudad }}</p>
+                </div>
+                <div class="flex gap-2">
+                  <button (click)="editarZona(zona, $event)" class="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-indigo-400 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg></button>
+                  <button (click)="eliminarZona(zona, $event)" class="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-rose-500 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                </div>
+              </div>
+              <button (click)="centrarEnZona(zona)" class="w-full py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors border border-slate-700">
+                Localizar en Mapa
+              </button>
             </div>
-          </div>
-        </div>
-      }
+          }
+        }
+      </div>
     </div>
-  }
+  </div>
 
-  <!-- ========================================== -->
-  <!-- MODAL INTERACTIVO CON MAPA Y FORMULARIO -->
-  <!-- ========================================== -->
+
+  <!-- MODAL DE CREACIÓN / EDICIÓN CON MINI-MAPA -->
   @if (modalAbierto()) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-entrance">
-      <div class="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div class="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-entrance">
+      <div class="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
         
-        <!-- Header del Modal -->
-        <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/40">
-          <h3 class="text-lg font-bold text-white">Registrar Nueva Zona con Mapa</h3>
-          <button (click)="cerrarModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+        <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/60 shrink-0">
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            {{ editandoId() ? 'Editar Geocerca' : 'Configurar Geocerca' }}
+          </h3>
+          <button (click)="cerrarModal()" class="text-slate-400 hover:text-white p-1">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
           </button>
         </div>
-
-        <!-- Cuerpo del Modal (Scrollable en móviles) -->
+        
         <div class="p-6 overflow-y-auto space-y-5">
-          
-          <!-- Formulario de campos -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Nombre del Edificio / Nodo</label>
-              <input type="text" [(ngModel)]="nuevaZona().nombre" placeholder="Ej: Loft El Poblado" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-rose-500 transition-colors">
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Nombre del Nodo</label>
+              <input type="text" [(ngModel)]="nuevaZona().nombre" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-rose-500">
             </div>
             <div>
-              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Ciudad / Sector</label>
-              <input type="text" [(ngModel)]="nuevaZona().ciudad" placeholder="Ej: Medellín" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-rose-500 transition-colors">
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Sector (Sugerido)</label>
+              <input type="text" [(ngModel)]="nuevaZona().ciudad" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-emerald-500/50 text-emerald-400 font-medium text-sm focus:outline-none">
             </div>
           </div>
 
-          <!-- MAPA INTERACTIVO INTEGRADO -->
           <div>
             <div class="flex justify-between items-center mb-2">
-              <label class="text-xs font-bold uppercase tracking-wider text-slate-400">Seleccionar ubicación en el mapa</label>
-              <span class="text-[11px] text-rose-400 font-medium">Arrastra o haz clic para ubicar el marcador</span>
+              <label class="text-xs font-bold uppercase tracking-wider text-slate-400">Radio de cobertura (metros)</label>
+              <span class="text-xs font-bold text-white bg-slate-800 px-3 py-1 rounded-lg">{{ nuevaZona().radio }}m</span>
             </div>
-            
-            <div class="relative w-full h-56 rounded-2xl overflow-hidden border border-slate-800 shadow-inner bg-slate-950">
-              <!-- Widget iframe de OpenStreetMap centrado en Medellín/Bello -->
-              <iframe 
-                width="100%" 
-                height="100%" 
-                frameborder="0" 
-                scrolling="no" 
-                marginheight="0" 
-                marginwidth="0" 
-                src="https://www.openstreetmap.org/export/embed.html?bbox=-75.60%2C6.20%2C-75.52%2C6.30&amp;layer=mapnik&amp;marker=6.25184%2C-75.56359" 
-                style="border: 0; filter: invert(90%) hue-rotate(180deg) brightness(95%) contrast(90%);">
-              </iframe>
-              
-              <!-- Marcador visual central de referencia -->
-              <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div class="w-6 h-6 rounded-full bg-rose-500/30 flex items-center justify-center animate-ping">
-                  <div class="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
-                </div>
-              </div>
-            </div>
+            <input type="range" min="100" max="5000" step="100" [(ngModel)]="nuevaZona().radio" (ngModelChange)="actualizarRadio()" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-rose-500">
           </div>
 
+          <div>
+            <div id="minimap" class="w-full h-48 sm:h-56 rounded-xl border border-slate-700 shadow-inner bg-slate-950 z-10"></div>
+          </div>
         </div>
 
-        <!-- Footer del Modal -->
-        <div class="px-6 py-4 border-t border-slate-800 bg-slate-950/40 flex justify-end gap-3">
-          <button (click)="cerrarModal()" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white transition-colors">
-            Cancelar
-          </button>
-          <button (click)="guardarZona()" class="px-6 py-2.5 rounded-xl text-sm font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/30 transition-all">
-            Guardar Zona
+        <div class="px-6 py-4 border-t border-slate-800 bg-slate-950/60 flex justify-end gap-3 shrink-0">
+          <button (click)="cerrarModal()" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white">Cancelar</button>
+          <button (click)="guardarZona()" class="px-6 py-2.5 rounded-xl text-sm font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/30">
+            {{ editandoId() ? 'Actualizar' : 'Guardar' }}
           </button>
         </div>
-
       </div>
     </div>
   }

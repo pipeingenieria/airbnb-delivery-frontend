@@ -29,3 +29,13 @@ export interface Aliado {
   zona_id: number;
   estado_operativo: string;
 }
+
+export interface Zona {
+  id?: number;
+  nombre: string;
+  ciudad: string;
+  activo: boolean;
+  latitud?: number;
+  longitud?: number;
+  radio?: number; // <-- Nuevo: Radio de la zona en metros
+}
