@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, AfterViewInit } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AdminService } from '../../../services/admin.service';
@@ -30,6 +30,30 @@ export class ZonasList implements OnInit, AfterViewInit {
     radio: 1000 
   });
 
+  // ESTADO PARA FILTRO Y PAGINACIÓN
+  filtroLista = signal<string>('');
+  paginaActual = signal<number>(1);
+  itemsPorPagina = 4;
+
+  zonasFiltradas = computed(() => {
+    const term = this.filtroLista().toLowerCase().trim();
+    if (!term) return this.zonas();
+    return this.zonas().filter(z => 
+      z.nombre.toLowerCase().includes(term) || 
+      z.ciudad.toLowerCase().includes(term)
+    );
+  });
+
+  totalPaginas = computed(() => {
+    return Math.ceil(this.zonasFiltradas().length / this.itemsPorPagina) || 1;
+  });
+
+  zonasPaginadas = computed(() => {
+    const inicio = (this.paginaActual() - 1) * this.itemsPorPagina;
+    const fin = inicio + this.itemsPorPagina;
+    return this.zonasFiltradas().slice(inicio, fin);
+  });
+
   private map!: L.Map;
   private markersLayer = L.layerGroup();
   
@@ -50,7 +74,6 @@ export class ZonasList implements OnInit, AfterViewInit {
       this.map.remove();
     }
     
-    // Motor optimizado
     this.map = L.map('geocercas-map', { 
       zoomControl: false,
       preferCanvas: true,
@@ -59,7 +82,8 @@ export class ZonasList implements OnInit, AfterViewInit {
     
     L.control.zoom({ position: 'bottomright' }).addTo(this.map);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    // MAPA PRINCIPAL: OpenStreetMap Standard (Máximo contraste)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap',
       maxZoom: 19,
       keepBuffer: 6,
@@ -97,10 +121,22 @@ export class ZonasList implements OnInit, AfterViewInit {
           radius: radio
         });
 
+        // 1. Evitar que un clic simple en la zona abra el modal de "Crear Nueva"
+        circle.on('click', (e: any) => {
+          L.DomEvent.stopPropagation(e);
+        });
+
+        // 2. Doble clic para abrir el modal de edición directamente
+        circle.on('dblclick', (e: any) => {
+          L.DomEvent.stopPropagation(e);
+          this.editarZona(zona); // Llamamos a editar sin enviar el event HTML
+        });
+
         circle.bindPopup(`
-          <div style="font-family: sans-serif;">
+          <div style="font-family: sans-serif; text-align: center;">
             <strong style="color: #0f172a; font-size: 14px;">${zona.nombre}</strong><br>
-            <span style="color: #64748b; font-size: 12px;">Cobertura: ${radio}m</span>
+            <span style="color: #64748b; font-size: 12px;">Cobertura: ${radio}m</span><br>
+            <span style="color: #f43f5e; font-size: 10px; font-weight: bold; margin-top: 4px; display: block;">(Doble clic para editar)</span>
           </div>
         `);
         
@@ -124,7 +160,23 @@ export class ZonasList implements OnInit, AfterViewInit {
     });
   }
 
-  // --- SOLUCIÓN: FUNCIÓN CENTRAR RESTAURADA ---
+  actualizarFiltroLista(event: any) {
+    this.filtroLista.set(event.target.value);
+    this.paginaActual.set(1);
+  }
+
+  paginaAnterior() {
+    if (this.paginaActual() > 1) {
+      this.paginaActual.update(p => p - 1);
+    }
+  }
+
+  paginaSiguiente() {
+    if (this.paginaActual() < this.totalPaginas()) {
+      this.paginaActual.update(p => p + 1);
+    }
+  }
+
   centrarEnZona(zona: Zona) {
     const lat = Number(zona.latitud);
     const lng = Number(zona.longitud);
@@ -136,8 +188,10 @@ export class ZonasList implements OnInit, AfterViewInit {
     }
   }
 
-  editarZona(zona: Zona, event: Event) {
-    event.stopPropagation();
+  editarZona(zona: Zona, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
     this.editandoId.set(zona.id || null);
     
     const lat = Number(zona.latitud) || 6.3373;
@@ -185,6 +239,34 @@ export class ZonasList implements OnInit, AfterViewInit {
       }
     } catch (error) {
       console.error('Error en búsqueda:', error);
+    }
+  }
+
+  async buscarDireccionModal() {
+    const query = this.nuevaZona().ciudad;
+    if (!query || query.trim() === '') return;
+
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Antioquia, Colombia')}&limit=1`);
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lng = parseFloat(data[0].lon);
+        
+        // Actualizamos las coordenadas
+        this.nuevaZona.update(z => ({ ...z, latitud: lat, longitud: lng }));
+        
+        // Movemos el mini-mapa, el pin y la geocerca a la nueva ubicación
+        if (this.miniMap) this.miniMap.flyTo([lat, lng], 15, { duration: 1 });
+        if (this.miniMapMarker) this.miniMapMarker.setLatLng([lat, lng]);
+        if (this.miniMapCircle) this.miniMapCircle.setLatLng([lat, lng]);
+        
+      } else {
+        alert('No pudimos ubicar esa dirección. Intenta agregar el barrio o municipio.');
+      }
+    } catch (error) {
+      console.error('Error en búsqueda del modal:', error);
     }
   }
 
@@ -243,7 +325,10 @@ export class ZonasList implements OnInit, AfterViewInit {
     
     L.control.zoom({ position: 'bottomright' }).addTo(this.miniMap);
     
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    // MINIMAPA: OpenStreetMap Standard (Máximo contraste)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap',
+      maxZoom: 19,
       keepBuffer: 6,
       updateWhenIdle: false,
       updateWhenZooming: false

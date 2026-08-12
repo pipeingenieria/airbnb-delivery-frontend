@@ -1,8 +1,10 @@
 <div class="space-y-4 lg:space-y-6 flex flex-col w-full animate-entrance pb-6 lg:pb-0">
   
   <!-- CABECERA Y BUSCADOR -->
-  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 shrink-0">
-    <div class="flex-1">
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-start gap-4 lg:gap-10 shrink-0">
+    
+    <!-- Se retiró el "flex-1" para que no empuje al buscador a la derecha -->
+    <div>
       <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Centro de Geocercas</h2>
       <p class="text-xs sm:text-sm text-slate-400 mt-1">Dibuja polígonos de cobertura para asignar restaurantes.</p>
     </div>
@@ -16,7 +18,7 @@
         <button (click)="buscarEnMapa()" class="absolute inset-y-1.5 right-1.5 px-3 bg-rose-600 hover:bg-rose-500 rounded-lg text-white text-[10px] font-bold uppercase tracking-wider transition-colors">Volar</button>
       </div>
 
-      <button (click)="abrirModalCrear()" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-rose-600 to-rose-500 text-white shadow-lg shadow-rose-600/30 hover:from-rose-500 active:scale-95 border border-rose-400/30 shrink-0">
+      <button (click)="abrirModalCrear()" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-rose-600 to-rose-500 text-white shadow-lg shadow-rose-600/30 hover:from-rose-500 hover:to-rose-400 hover:shadow-xl hover:shadow-rose-500/60 hover:brightness-110 active:scale-95 active:brightness-125 border border-rose-400/30 shrink-0 transition-all duration-300">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
         Nueva Geocerca
       </button>
@@ -28,27 +30,49 @@
     
     <!-- MAPA INTERACTIVO LEAFLET -->
     <div class="w-full lg:flex-1 h-[60vh] lg:h-full relative rounded-3xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900 shrink-0">
-      <div id="geocercas-map" class="absolute inset-0 z-10"></div>
+        <!-- MEDALLITA FLOTANTE DE ZONAS ACTIVAS (RESTAURADA) -->
+        <div class="absolute top-4 left-4 z-[400] pointer-events-none">
+            <div class="px-4 py-2.5 rounded-2xl bg-slate-950/90 backdrop-blur-md border border-slate-800 text-xs font-semibold text-white shadow-lg flex items-center gap-2.5">
+            <!-- Punto titilante (Ping) -->
+            <span class="relative flex h-2.5 w-2.5">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_8px_#34d399]"></span>
+            </span>
+            <span>{{ zonas().length }} Zonas Activas</span>
+            </div>
+        </div>
+
+        <div id="geocercas-map" class="absolute inset-0 z-10"></div>
     </div>
 
     <!-- PANEL LATERAL SCROLLABLE -->
     <div class="w-full lg:w-[400px] shrink-0 bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-5 flex flex-col shadow-xl h-[50vh] lg:h-full">
-      <div class="flex justify-between items-center mb-4 px-1">
+      
+      <!-- Título y Contador -->
+      <div class="flex justify-between items-center mb-4 px-1 shrink-0">
         <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">Zonas Activas</h3>
-        <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold">{{ zonas().length }}</span>
+        <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold">{{ zonasFiltradas().length }}</span>
+      </div>
+
+      <!-- Buscador de la lista -->
+      <div class="mb-4 relative shrink-0">
+        <input type="text" [ngModel]="filtroLista()" (input)="actualizarFiltroLista($event)" placeholder="Filtrar nodos creados..." class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-950/80 border border-slate-700 text-white text-sm focus:border-rose-500 focus:outline-none transition-colors shadow-inner">
+        <svg class="w-4 h-4 text-slate-500 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
       </div>
       
+      <!-- Lista Paginada -->
       <div class="flex-1 overflow-y-auto space-y-3 pr-1">
         @if (cargando()) {
           @for (i of [1, 2, 3]; track i) {
             <div class="h-24 rounded-2xl bg-slate-800/50 animate-pulse"></div>
           }
-        } @else if (zonas().length === 0) {
+        } @else if (zonasFiltradas().length === 0) {
           <div class="text-center py-10 text-slate-500 text-sm bg-slate-950/40 rounded-2xl border border-slate-800 border-dashed">
-            Aún no hay geocercas en tu base de datos.
+            No se encontraron zonas que coincidan.
           </div>
         } @else {
-          @for (zona of zonas(); track zona.id) {
+          <!-- ATENCIÓN: El loop ahora itera sobre zonasPaginadas() -->
+          @for (zona of zonasPaginadas(); track zona.id) {
             <div class="group p-4 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-rose-500/50 transition-all flex flex-col gap-3">
               <div class="flex justify-between items-start">
                 <div>
@@ -58,7 +82,7 @@
                   </div>
                   <p class="text-[11px] text-slate-400 leading-tight pr-2">{{ zona.ciudad }}</p>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex gap-2 shrink-0">
                   <button (click)="editarZona(zona, $event)" class="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-indigo-400 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                   </button>
@@ -74,6 +98,24 @@
           }
         }
       </div>
+
+      <!-- Controles de Paginación -->
+      @if (totalPaginas() > 1) {
+        <div class="mt-4 pt-4 border-t border-slate-800 flex justify-between items-center shrink-0">
+          <button (click)="paginaAnterior()" [disabled]="paginaActual() === 1" class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path></svg>
+          </button>
+          
+          <span class="text-xs font-bold text-slate-400 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
+            {{ paginaActual() }} / {{ totalPaginas() }}
+          </span>
+          
+          <button (click)="paginaSiguiente()" [disabled]="paginaActual() === totalPaginas()" class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
+          </button>
+        </div>
+      }
+
     </div>
   </div>
 
@@ -96,11 +138,16 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Nombre del Nodo</label>
-              <input type="text" [(ngModel)]="nuevaZona().nombre" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-rose-500">
+              <input type="text" [(ngModel)]="nuevaZona().nombre" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-rose-500 shadow-inner">
             </div>
             <div>
-              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Sector (Sugerido)</label>
-              <input type="text" [(ngModel)]="nuevaZona().ciudad" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-emerald-500/50 text-emerald-400 font-medium text-sm focus:outline-none">
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Dirección a buscar</label>
+              <div class="flex gap-2">
+                <input type="text" [(ngModel)]="nuevaZona().ciudad" (keyup.enter)="buscarDireccionModal()" placeholder="Ej: Parque de Bello..." class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-emerald-500/50 text-emerald-400 font-medium text-sm focus:outline-none focus:border-emerald-500 transition-colors shadow-inner">
+                <button (click)="buscarDireccionModal()" class="px-4 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-white text-xs font-bold transition-colors shadow-lg shrink-0">
+                  Buscar
+                </button>
+              </div>
             </div>
           </div>
 

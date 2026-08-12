@@ -85,9 +85,12 @@
 
     <!-- CONTENIDO DINÁMICO CON PADDING ADAPTATIVO -->
     <div class="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900/40 via-slate-950 to-slate-950">
-      <div class="max-w-7xl mx-auto w-full">
+      
+      <!-- Eliminamos "max-w-7xl mx-auto" para que use el 100% del monitor -->
+      <div class="w-full">
         <router-outlet></router-outlet>
       </div>
+      
     </div>
   </main>
 
