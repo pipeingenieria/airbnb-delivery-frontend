@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Zona, Categoria, Propiedad, Aliado } from '../../models/admin.models';
+import { Zona, Categoria, Propiedad, Aliado, PropiedadBatchCreate } from '../../models/admin.models';
 
 @Injectable({
   providedIn: 'root'
@@ -43,14 +43,28 @@ export class AdminService {
     return this.http.post<Categoria>(`${this.apiUrl}/categorias`, categoria);
   }
 
-  // ==========================================
-  // PROPIEDADES (Apartamentos)
+  /// ==========================================
+  // PROPIEDADES (Apartamentos y Edificios)
   // ==========================================
   getPropiedades(): Observable<Propiedad[]> {
     return this.http.get<Propiedad[]>(`${this.apiUrl}/propiedades`);
   }
+  
   createPropiedad(propiedad: Propiedad): Observable<Propiedad> {
     return this.http.post<Propiedad>(`${this.apiUrl}/propiedades`, propiedad);
+  }
+
+  // NUEVO: Endpoint para creación en lote
+  createPropiedadBatch(batchData: PropiedadBatchCreate): Observable<any> {
+    return this.http.post(`${this.apiUrl}/propiedades/batch`, batchData);
+  }
+
+  updatePropiedad(id: number, propiedad: Propiedad): Observable<Propiedad> {
+    return this.http.put<Propiedad>(`${this.apiUrl}/propiedades/${id}`, propiedad);
+  }
+
+  deletePropiedad(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/propiedades/${id}`);
   }
 
   // ==========================================
