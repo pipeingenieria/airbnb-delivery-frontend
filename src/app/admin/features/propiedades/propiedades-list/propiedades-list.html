@@ -2,6 +2,40 @@
   .leaflet-popup-content-wrapper { padding: 0 !important; border-radius: 10px !important; overflow: hidden !important; background: transparent !important; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important; }
   .leaflet-popup-content { margin: 0 !important; width: 140px !important; }
   .leaflet-popup-tip { background: #1e293b !important; }
+
+  /* --- ANIMACIONES ELEGANTES --- */
+  @keyframes toastPremiumSpring {
+    0% { opacity: 0; transform: translate(-50%, -20px) scale(0.9); }
+    100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  }
+  .animate-toast-premium {
+    animation: toastPremiumSpring 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  @keyframes unitPopIn {
+    0% { opacity: 0; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  .animate-unit-enter {
+    animation: unitPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes unitCollapse {
+    0% { opacity: 1; transform: scale(1); max-height: 60px; margin-bottom: 8px; }
+    100% { opacity: 0; transform: scale(0.9); max-height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; border-width: 0; }
+  }
+  .animate-unit-exit {
+    animation: unitCollapse 0.35s ease-out forwards;
+    overflow: hidden;
+  }
+
+  @keyframes unitHighlight {
+    0% { background-color: rgba(99, 102, 241, 0.3); border-color: rgba(99, 102, 241, 0.8); box-shadow: 0 0 15px rgba(99, 102, 241, 0.3); }
+    100% { background-color: rgba(30, 41, 59, 0.4); border-color: rgba(51, 65, 85, 0.6); box-shadow: none; }
+  }
+  .animate-unit-highlight {
+    animation: unitHighlight 2s ease-out forwards;
+  }
 </style>
 
 <div class="space-y-4 lg:space-y-6 flex flex-col w-full animate-entrance pb-6 lg:pb-0">
@@ -34,7 +68,7 @@
       <div class="absolute top-4 left-4 z-[400] pointer-events-none">
         <div class="px-4 py-2.5 rounded-2xl bg-slate-950/90 backdrop-blur-md border border-slate-800 text-xs font-bold text-white shadow-lg flex items-center gap-2.5">
           <span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500 shadow-[0_0_8px_#3b82f6]"></span></span>
-          <span>{{ propiedades().length }} Propiedades Activas</span>
+          <span>{{ propiedadesActivasCount() }} Propiedades Activas</span>
         </div>
       </div>
       <div id="propiedades-map" class="absolute inset-0 z-10"></div>
@@ -46,9 +80,16 @@
         <span class="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-xs font-bold">{{ gruposFiltrados().length }} Grupos</span>
       </div>
 
-      <div class="mb-4 relative shrink-0">
-        <input type="text" [ngModel]="filtroLista()" (input)="actualizarFiltroLista($event)" placeholder="Filtrar propiedades y edificios..." class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-950/80 border border-slate-700 text-white text-sm focus:border-blue-500 focus:outline-none transition-colors shadow-inner">
-        <svg class="w-4 h-4 text-slate-500 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+      <div class="mb-4 flex gap-2 shrink-0 relative">
+        <div class="relative w-full">
+          <input type="text" [ngModel]="filtroLista()" (input)="actualizarFiltroLista($event)" placeholder="Filtrar propiedades..." class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-950/80 border border-slate-700 text-white text-sm focus:border-indigo-500 focus:outline-none transition-colors shadow-inner">
+          <svg class="w-4 h-4 text-slate-500 absolute left-3 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </div>
+        <select [ngModel]="filtroEstado()" (ngModelChange)="filtroEstado.set($event); paginaActual.set(1)" class="px-3 py-2.5 rounded-xl bg-slate-950/80 border border-slate-700 text-slate-300 text-sm focus:outline-none focus:border-indigo-500 cursor-pointer shadow-inner shrink-0 appearance-none">
+          <option value="todos">Todos</option>
+          <option value="activos">Activos</option>
+          <option value="inactivos">Inactivos</option>
+        </select>
       </div>
       
       <div class="flex-1 overflow-y-auto space-y-3 pr-1">
@@ -59,13 +100,14 @@
         } @else {
           @for (grupo of gruposPaginados(); track grupo.id) {
             
-            <!-- TARJETA PREMIUM DEL DIRECTORIO -->
-            <div class="group p-4 rounded-2xl bg-slate-900/60 border border-slate-700/50 hover:bg-slate-800/80 hover:border-blue-500/50 transition-all flex flex-col gap-3 relative overflow-hidden">
+            <!-- TARJETA DEL DIRECTORIO -->
+            <div class="group p-4 rounded-2xl bg-slate-900/60 border border-slate-700/50 hover:bg-slate-800/80 hover:border-blue-500/50 transition-all flex flex-col gap-3 relative overflow-hidden"
+                 [ngClass]="{'opacity-60 grayscale': !grupo.activo}">
                <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b" [ngClass]="grupo.esEdificio ? 'from-indigo-500 to-purple-600' : 'from-blue-500 to-cyan-500'"></div>
                
                <div class="flex justify-between items-start pl-2">
                  <div class="flex items-center gap-3 w-[70%]">
-                    <!-- ICONO LIMPIO (SÓLO EL SVG, SIN GRILLAS RARAS) -->
+                    <!-- ICONO -->
                     <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shrink-0" [ngClass]="grupo.esEdificio ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/20' : 'bg-blue-500/20 text-blue-400 border border-blue-500/20'">
                        @if (grupo.esEdificio) {
                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
@@ -81,7 +123,7 @@
                     </div>
                  </div>
                  
-                 <!-- Botones Laterales -->
+                 <!-- Botones -->
                  <div class="flex gap-0.5 shrink-0">
                     <button (click)="descargarQR(grupo, $event)" title="Descargar Código(s) QR" class="p-1.5 text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-all">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
@@ -95,7 +137,7 @@
                  </div>
                </div>
     
-               <!-- ACORDEÓN ELEGANTE (1 Columna, Nombres Completos) -->
+               <!-- ACORDEÓN ELEGANTE PARA EDIFICIOS -->
                @if (grupo.esEdificio) {
                   <div class="mt-1 pl-2 pr-1">
                      <button (click)="toggleEdificio(grupo.id, $event)" class="w-full flex items-center justify-between bg-slate-950/40 hover:bg-slate-900/80 border border-slate-700/50 rounded-lg px-2.5 py-1.5 transition-colors focus:outline-none">
@@ -106,12 +148,11 @@
                         <svg class="w-4 h-4 text-slate-500 transition-transform duration-300" [ngClass]="{'rotate-180': edificiosExpandidos()[grupo.id]}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                      </button>
                      
-                     <!-- Lista Colapsable -->
                      <div class="overflow-hidden transition-all duration-300 ease-in-out" [ngClass]="edificiosExpandidos()[grupo.id] ? 'max-h-64 opacity-100 mt-2' : 'max-h-0 opacity-0'">
                         <div class="flex flex-col gap-1.5 pr-1 overflow-y-auto max-h-60 custom-scrollbar">
                            @for (p of grupo.propiedades; track p.id) {
-                              <div class="flex items-center justify-between bg-slate-800/40 border border-slate-700/50 rounded-lg pl-3 pr-1 py-1.5 group/apto hover:bg-slate-700/60 transition-colors">
-                                 <!-- Aquí forzamos mostrar el nombre completo -->
+                              <div class="flex items-center justify-between bg-slate-800/40 border border-slate-700/50 rounded-lg pl-3 pr-1 py-1.5 group/apto hover:bg-slate-700/60 transition-colors"
+                                   [ngClass]="{'opacity-50 line-through': !p.activo}">
                                  <span class="text-[11px] text-slate-300 font-medium truncate pr-2" [title]="p.nombre">{{ p.nombre }}</span>
                                  <button (click)="descargarQRUnico(p, $event)" title="Descargar QR Individual" class="p-1.5 text-slate-500 hover:text-emerald-400 bg-slate-950/50 hover:bg-emerald-500/10 rounded-md transition-all shrink-0 opacity-0 group-hover/apto:opacity-100">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
@@ -147,6 +188,19 @@
 
   @if (modalAbierto()) {
     <div class="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm animate-entrance">
+      
+      <!-- TOAST DE NOTIFICACIÓN ANIMADO -->
+      @if (toastMessage()) {
+        <div class="absolute top-6 left-1/2 -translate-x-1/2 z-[700] animate-toast-premium pointer-events-none w-[90%] max-w-md">
+          <div class="px-5 py-3 rounded-2xl shadow-[0_0_25px_rgba(99,102,241,0.3)] border border-indigo-500/50 bg-slate-900/95 text-white text-[13px] font-semibold flex items-center gap-3 backdrop-blur-xl">
+            <div class="flex items-center justify-center w-7 h-7 rounded-full bg-indigo-500/20 shrink-0">
+              <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <span class="truncate">{{ toastMessage() }}</span>
+          </div>
+        </div>
+      }
+
       <div class="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
         
         <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/60 shrink-0">
@@ -174,6 +228,16 @@
                 </div>
               }
 
+              <!-- TOGGLE ESTADO MAESTRO (Sirve para Casa o Edificio Entero) -->
+              <div class="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800 mt-2">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Estado Operativo {{ esEdificio() ? 'Lote/Edificio' : 'Propiedad' }}</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" [ngModel]="nuevaPropiedad().activo" (ngModelChange)="toggleEstadoMaestro($event)" class="sr-only peer">
+                  <div class="w-10 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                  <span class="ml-3 text-xs font-bold" [ngClass]="nuevaPropiedad().activo ? 'text-emerald-400' : 'text-slate-500'">{{ nuevaPropiedad().activo ? 'Activa' : 'Inactiva' }}</span>
+                </label>
+              </div>
+
               <div>
                 <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">{{ esEdificio() ? 'Nombre del Edificio / Conjunto' : 'Nombre Referencia (Ej: Apto Juan)' }} <span class="text-rose-500">*</span></label>
                 <input type="text" [(ngModel)]="nuevaPropiedad().nombre" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:outline-none focus:border-blue-500 shadow-inner">
@@ -197,36 +261,74 @@
                 </div>
               </div>
 
+              <!-- GESTOR INTELIGENTE DE APARTAMENTOS (EDIFICIOS) -->
               @if (esEdificio()) {
-                <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-700/50 shadow-inner animate-entrance">
-                  <div class="flex justify-between items-center mb-4">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-blue-400">
-                      Apartamentos del Edificio <span class="text-rose-500">*</span>
+                <div class="bg-slate-900/40 p-5 rounded-2xl border border-slate-700/40 shadow-inner animate-entrance">
+                  <div class="flex justify-between items-center mb-4 px-1">
+                    <label class="block text-[11px] font-bold uppercase tracking-widest text-indigo-400">
+                      Apartamentos <span class="text-rose-500">*</span>
                     </label>
-                    <span class="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-xs font-bold">{{ listaAptos().length }} Aptos</span>
+                    <span class="px-2.5 py-1 rounded-md bg-indigo-500/10 text-indigo-300 text-[10px] font-bold border border-indigo-500/20 shadow-sm">{{ listaAptos().length }} Registradas</span>
                   </div>
 
-                  <div class="flex gap-2 mb-4">
-                    <input type="text" [(ngModel)]="aptoInput" (keyup.enter)="agregarApto()" placeholder="Ej: 101, Torre 2-405..." class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:outline-none focus:border-blue-500 shadow-inner transition-colors">
-                    <button (click)="agregarApto()" class="px-5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm transition-all shadow-lg flex items-center gap-2">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Añadir
-                    </button>
+                  <!-- SMART INPUT -->
+                  <div class="relative group mb-5">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <svg class="w-4 h-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    </div>
+                    <input type="text" [(ngModel)]="aptoInput" (keydown.enter)="agregarApto($event)" (keydown.comma)="agregarApto($event)" placeholder="Ej: 101, 102, Torre 3... (Presiona Enter)" class="w-full pl-10 pr-16 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 shadow-inner transition-all placeholder:text-slate-500">
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                       <kbd class="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-[9px] font-bold text-slate-400 bg-slate-800 rounded border border-slate-700 uppercase tracking-wider">Enter ↵</kbd>
+                    </div>
                   </div>
                   
                   @if (listaAptos().length === 0) {
-                    <div class="flex flex-col items-center justify-center py-6 border-2 border-dashed border-slate-700 rounded-xl bg-slate-950/30">
-                      <svg class="w-8 h-8 text-slate-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                      <p class="text-xs text-slate-400 font-medium">No hay Apartamentos agregadas al lote.</p>
+                    <div class="flex flex-col items-center justify-center py-8 border border-dashed border-slate-700/60 rounded-xl bg-slate-950/20">
+                      <div class="w-10 h-10 rounded-full bg-slate-800/50 flex items-center justify-center mb-3">
+                        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                      </div>
+                      <p class="text-[11px] text-slate-400 font-medium">No hay unidades agregadas.</p>
+                      <p class="text-[10px] text-slate-500 mt-1">Escribe arriba y presiona Enter.</p>
                     </div>
                   } @else {
-                    <!-- Restaurado el diseño de Chips (Flex wrap) -->
-                    <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto pr-1 custom-scrollbar">
-                      @for (apto of listaAptos(); track apto) {
-                        <div class="flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 text-blue-300 px-3 py-1.5 rounded-lg text-sm font-medium animate-entrance">
-                          {{ apto }}
-                          <button (click)="removerApto(apto)" class="hover:text-rose-400 transition-colors focus:outline-none">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                          </button>
+                    
+                    <!-- LISTA DE PISOS ORDENADOS Y ACTIVABLES -->
+                    <div class="mt-4 flex flex-col gap-2 max-h-64 overflow-y-auto pr-1 custom-scrollbar scroll-smooth">
+                      @for (aptoObj of listaAptos(); track aptoObj.nomenclatura) {
+                        <div [id]="'apto-row-' + aptoObj.nomenclatura" class="relative flex items-center justify-between px-4 py-3 rounded-xl border transition-all duration-300 group/unit"
+                             [ngClass]="{
+                                'animate-unit-exit': aptosEliminando().includes(aptoObj.nomenclatura),
+                                'animate-unit-enter': !aptosEliminando().includes(aptoObj.nomenclatura),
+                                'animate-unit-highlight': ultimoAptoAgregado() === aptoObj.nomenclatura,
+                                'bg-slate-800/40 border-slate-700/60 hover:bg-slate-800/80 hover:border-slate-600': ultimoAptoAgregado() !== aptoObj.nomenclatura,
+                                'opacity-50 grayscale': !aptoObj.activo
+                             }">
+                          
+                          <div class="flex items-center gap-4 overflow-hidden">
+                            <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors"
+                                 [ngClass]="ultimoAptoAgregado() === aptoObj.nomenclatura ? 'bg-indigo-500/20 text-indigo-400' : (aptoObj.activo ? 'bg-slate-900/80 text-slate-400 border border-slate-800' : 'bg-red-500/10 text-red-400 border border-red-500/20')">
+                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                            </div>
+                            
+                            <div class="flex flex-col truncate">
+                              <span class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-0.5">Apartamento</span>
+                              <span class="text-[14px] font-bold truncate leading-tight" [ngClass]="aptoObj.activo ? 'text-slate-200' : 'text-slate-500 line-through'">{{ aptoObj.nomenclatura }}</span>
+                            </div>
+                          </div>
+                          
+                          <div class="flex items-center gap-1">
+                            <!-- BOTÓN APAGAR/ENCENDER -->
+                            <button (click)="toggleAptoEstado(aptoObj.nomenclatura, $event)" title="Pausar/Activar Operación" class="p-2 text-slate-500 hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition-all focus:opacity-100 shrink-0">
+                              @if (aptoObj.activo) {
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                              } @else {
+                                <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"></path></svg>
+                              }
+                            </button>
+                            <button (click)="removerApto(aptoObj.nomenclatura)" class="p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all opacity-0 group-hover/unit:opacity-100 focus:opacity-100 shrink-0">
+                              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                          </div>
                         </div>
                       }
                     </div>

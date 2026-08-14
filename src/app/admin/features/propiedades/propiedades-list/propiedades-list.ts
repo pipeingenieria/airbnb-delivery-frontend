@@ -15,7 +15,7 @@ export interface GrupoPropiedad {
   longitud: number;
   propiedades: Propiedad[];
   imagen_url: string | null;
-  activo: boolean;
+  activo: boolean; 
 }
 
 @Component({
@@ -26,29 +26,41 @@ export interface GrupoPropiedad {
 })
 export class PropiedadesList implements OnInit, AfterViewInit {
   private adminService = inject(AdminService);
-  // Estado para controlar qué edificios tienen su lista de aptos expandida en el directorio
+  
   edificiosExpandidos = signal<Record<string, boolean>>({});
+
+  toastMessage = signal<string | null>(null);
+  ultimoAptoAgregado = signal<string | null>(null);
+  aptosEliminando = signal<string[]>([]);
 
   propiedades = signal<Propiedad[]>([]);
   zonasActivas = signal<Zona[]>([]);
   cargando = signal<boolean>(true);
   
+  // CONTADOR DINÁMICO DE PROPIEDADES ACTIVAS
+  propiedadesActivasCount = computed(() => this.propiedades().filter(p => p.activo).length);
+
   busquedaDireccion = signal<string>('');
   modalAbierto = signal<boolean>(false);
   editandoId = signal<number | null>(null);
   
   esEdificio = signal<boolean>(false);
-  listaAptos = signal<string[]>([]);
+  listaAptos = signal<{nomenclatura: string, activo: boolean}[]>([]);
   aptoInput = signal<string>('');
-  imagenPreview = signal<string | null>(null);
   
+  filtroLista = signal<string>('');
+  filtroEstado = signal<'todos' | 'activos' | 'inactivos'>('todos');
+  paginaActual = signal<number>(1);
+  itemsPorPagina = 4;
+  
+  imagenPreview = signal<string | null>(null);
   propiedadesEdificioOriginal = signal<Propiedad[]>([]);
   zonasQueCubren = signal<Zona[]>([]);
 
   nuevaPropiedad = signal<Propiedad & { imagen_url?: string }>({
     nombre: '',
     direccion_apto: '',
-    activo: true,
+    activo: true, 
     latitud: 6.3373, 
     longitud: -75.5579,
     zonas_ids: []
@@ -57,14 +69,9 @@ export class PropiedadesList implements OnInit, AfterViewInit {
   esDireccionValida = computed(() => {
     const dir = (this.nuevaPropiedad().direccion_apto || '').toLowerCase().trim();
     const invalidos = ['buscando...', 'calculando ubicación...', 'ubicación seleccionada'];
-    
-    // Si está vacía, muy corta o tiene textos por defecto del mapa, bloqueamos
     if (dir.length < 6 || invalidos.includes(dir)) return false;
-
-    // Validación estricta para Colombia: Debe tener al menos un número Y un indicador de placa/detalle
     const tieneNumero = /\d/.test(dir);
     const tieneNomenclatura = /[#-]|apto|bloque|interior|mz|manzana|lote|torre|casa|local/i.test(dir);
-
     return tieneNumero && tieneNomenclatura;
   });
 
@@ -77,11 +84,6 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     return true;
   });
 
-  filtroLista = signal<string>('');
-  paginaActual = signal<number>(1);
-  itemsPorPagina = 4;
-
-  // LÓGICA MAESTRA DE AGRUPACIÓN (DIRECTORIO PREMIUM)
   gruposPropiedades = computed<GrupoPropiedad[]>(() => {
     const map = new Map<string, Propiedad[]>();
     this.propiedades().forEach(p => {
@@ -93,10 +95,10 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     const result: GrupoPropiedad[] = [];
     map.forEach((props, key) => {
       const esEdificio = props.length > 1;
-      // Buscar una propiedad que SÍ tenga el formato correcto para heredar el nombre del edificio
       const pPrincipal = props.find(p => p.nombre.includes(' - Apto ')) || props[0];
       const nombreBase = esEdificio ? pPrincipal.nombre.split(' - Apto ')[0] : pPrincipal.nombre;
-      
+      const propsOrdenadas = props.sort((a,b) => b.nombre.localeCompare(a.nombre, undefined, { numeric: true, sensitivity: 'base' }));
+
       result.push({
         id: key,
         esEdificio,
@@ -104,9 +106,9 @@ export class PropiedadesList implements OnInit, AfterViewInit {
         direccionBase: pPrincipal.direccion_apto || 'Sin Dirección',
         latitud: pPrincipal.latitud || 0,
         longitud: pPrincipal.longitud || 0,
-        propiedades: props.sort((a,b) => a.nombre.localeCompare(b.nombre)),
+        propiedades: propsOrdenadas,
         imagen_url: (pPrincipal as any).imagen_url || null,
-        activo: props.some(p => p.activo)
+        activo: props.some(p => p.activo) 
       });
     });
     return result.sort((a,b) => a.nombrePrincipal.localeCompare(b.nombrePrincipal));
@@ -114,8 +116,15 @@ export class PropiedadesList implements OnInit, AfterViewInit {
 
   gruposFiltrados = computed(() => {
     const term = this.filtroLista().toLowerCase().trim();
-    if (!term) return this.gruposPropiedades();
-    return this.gruposPropiedades().filter(g => 
+    const estado = this.filtroEstado();
+    
+    let filtrados = this.gruposPropiedades();
+    
+    if (estado === 'activos') filtrados = filtrados.filter(g => g.activo);
+    if (estado === 'inactivos') filtrados = filtrados.filter(g => !g.activo);
+    
+    if (!term) return filtrados;
+    return filtrados.filter(g => 
       g.nombrePrincipal.toLowerCase().includes(term) || 
       g.direccionBase.toLowerCase().includes(term) ||
       g.propiedades.some(p => p.direccion_apto?.toLowerCase().includes(term))
@@ -183,36 +192,27 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     this.markersLayer.clearLayers();
     this.mainZonasLayer.clearLayers();
 
-    // Zonas del mapa principal con mayor visibilidad
     this.zonasActivas().forEach(zona => {
       if (zona.latitud && zona.longitud && zona.radio) {
         L.circle([Number(zona.latitud), Number(zona.longitud)], {
-          color: '#10b981', 
-          weight: 2, // Borde un poco más grueso
-          fillColor: '#10b981', 
-          fillOpacity: 0.15, // Opacidad aumentada para mayor presencia
-          radius: Number(zona.radio), 
-          interactive: false
+          color: '#10b981', weight: 2, fillColor: '#10b981', fillOpacity: 0.15, radius: Number(zona.radio), interactive: false
         }).addTo(this.mainZonasLayer);
       }
     });
-
-    const grupos = new Map<string, Propiedad[]>();
-    this.propiedades().forEach(p => {
-      if (p.latitud && p.longitud) {
-        const key = `${p.latitud},${p.longitud}`;
-        if (!grupos.has(key)) grupos.set(key, []);
-        grupos.get(key)!.push(p);
-      }
-    });
-
-    const pinIcon = L.divIcon({ className: 'custom-property-pin', html: `<div style="background-color: #3b82f6; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 10px #3b82f6;"></div>`, iconSize: [14, 14] });
-    const edificioIcon = L.divIcon({ className: 'custom-building-pin', html: `<div style="background-color: #8b5cf6; width: 18px; height: 18px; border-radius: 4px; border: 2px solid #fff; box-shadow: 0 0 12px #8b5cf6; display:flex; align-items:center; justify-content:center;"><span style="color:white; font-size:9px; font-weight:bold;">E</span></div>`, iconSize: [18, 18] });
 
     this.gruposPropiedades().forEach(grupo => {
       const lat = grupo.latitud;
       const lng = grupo.longitud;
       if(!lat || !lng) return;
+
+      // DISEÑO DE PINES INTELIGENTES PARA MAPA (Gris y punteado si está inactivo)
+      const colorPin = grupo.activo ? '#3b82f6' : '#475569';
+      const colorEdificio = grupo.activo ? '#8b5cf6' : '#475569';
+      const borderStyle = grupo.activo ? 'border: 2px solid #fff;' : 'border: 2px dashed #94a3b8; opacity: 0.85;';
+      const shadowStyle = grupo.activo ? `box-shadow: 0 0 10px ${colorPin};` : 'box-shadow: none;';
+
+      const pinIcon = L.divIcon({ className: 'custom-property-pin', html: `<div style="background-color: ${colorPin}; width: 14px; height: 14px; border-radius: 50%; ${borderStyle} ${shadowStyle}"></div>`, iconSize: [14, 14] });
+      const edificioIcon = L.divIcon({ className: 'custom-building-pin', html: `<div style="background-color: ${colorEdificio}; width: 18px; height: 18px; border-radius: 4px; ${borderStyle} ${shadowStyle} display:flex; align-items:center; justify-content:center;"><span style="color:white; font-size:9px; font-weight:bold;">E</span></div>`, iconSize: [18, 18] });
 
       const marker = L.marker([lat, lng], { icon: grupo.esEdificio ? edificioIcon : pinIcon });
       marker.on('click', (e: any) => L.DomEvent.stopPropagation(e));
@@ -221,9 +221,7 @@ export class PropiedadesList implements OnInit, AfterViewInit {
         ? `<div style="width:100%; height:100%; background: linear-gradient(145deg, #0f172a, #1e293b); display:flex; flex-direction:column; align-items:center; justify-content:center; color:#64748b;"><svg style="width:36px;height:36px; margin-bottom:4px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg><span style="font-size:9px; font-weight:bold; letter-spacing:1px; text-transform:uppercase; color:#475569">Edificio</span></div>`
         : `<div style="width:100%; height:100%; background: linear-gradient(145deg, #0f172a, #1e293b); display:flex; flex-direction:column; align-items:center; justify-content:center; color:#64748b;"><svg style="width:36px;height:36px; margin-bottom:4px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg><span style="font-size:9px; font-weight:bold; letter-spacing:1px; text-transform:uppercase; color:#475569">Propiedad</span></div>`;
 
-      const mediaContent = grupo.imagen_url 
-        ? `<img src="${grupo.imagen_url}" style="width: 100%; height: 100%; object-fit: cover;">`
-        : placeholderHtml;
+      const mediaContent = grupo.imagen_url ? `<img src="${grupo.imagen_url}" style="width: 100%; height: 100%; object-fit: cover;">` : placeholderHtml;
 
       let popupHtml = `
         <div class="leaflet-interactive-popup" style="font-family: sans-serif; text-align: left; width: 140px; cursor: pointer; padding: 0;">
@@ -232,7 +230,7 @@ export class PropiedadesList implements OnInit, AfterViewInit {
             <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(30,41,59,1), transparent); height: 25px;"></div>
           </div>
           <div style="padding: 8px; background: #1e293b; border-radius: 0 0 10px 10px;">
-            <strong style="color: #f8fafc; font-size: 11px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${grupo.nombrePrincipal}</strong>
+            <strong style="color: #f8fafc; font-size: 11px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${grupo.nombrePrincipal} ${!grupo.activo ? '(Inactivo)' : ''}</strong>
             <span style="color: #94a3b8; font-size: 9px; line-height: 1.2; display: block; margin-top: 2px;">${grupo.esEdificio ? `${grupo.propiedades.length} Apartamentos` : grupo.direccionBase}</span>
             <div style="display: flex; align-items: center; gap: 3px; margin-top: 6px;">
               <svg style="width: 9px; height: 9px; color: #3b82f6;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
@@ -263,17 +261,125 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     });
   }
 
-  agregarApto() {
-    const val = this.aptoInput().trim();
-    if (val && !this.listaAptos().includes(val)) {
-      this.listaAptos.update(list => [...list, val]);
-      this.aptoInput.set('');
+  // --- LÓGICA DE APARTAMENTOS Y EDICIÓN ---
+
+  abrirEditorGrupo(props: Propiedad[], event?: Event) {
+    if (event) event.stopPropagation();
+    const esEdificio = props.length > 1;
+    const pPrincipal = props.find(p => p.nombre.includes(' - Apto ')) || props[0];
+
+    // Calcula si el edificio entero está activo (si hay al menos 1 apto activo)
+    const edificioActivo = props.some(p => p.activo !== false);
+
+    if (esEdificio) {
+      this.esEdificio.set(true);
+      this.propiedadesEdificioOriginal.set(props);
+      const nombreBase = pPrincipal.nombre.split(' - Apto ')[0] || pPrincipal.nombre;
+      
+      const aptosExtraidos = props.map(h => {
+        const nom = h.nombre.includes(' - Apto ') ? h.nombre.split(' - Apto ')[1] : h.nombre;
+        return { nomenclatura: nom, activo: h.activo !== undefined ? h.activo : true };
+      }).filter(a => a.nomenclatura);
+      
+      aptosExtraidos.sort((a, b) => b.nomenclatura.localeCompare(a.nomenclatura, undefined, { numeric: true, sensitivity: 'base' }));
+      this.listaAptos.set(aptosExtraidos);
+      
+      this.editandoId.set(pPrincipal.id || 99999); 
+      this.nuevaPropiedad.set({ ...pPrincipal, nombre: nombreBase, zonas_ids: pPrincipal.zonas_ids || [], activo: edificioActivo });
+    } else {
+      this.esEdificio.set(false);
+      this.propiedadesEdificioOriginal.set([]);
+      this.editandoId.set(pPrincipal.id || null);
+      this.nuevaPropiedad.set({ ...pPrincipal, zonas_ids: pPrincipal.zonas_ids || [], activo: pPrincipal.activo !== false });
+    }
+
+    this.imagenPreview.set((pPrincipal as any).imagen_url || null);
+    const lat = Number(pPrincipal.latitud) || 6.3373;
+    const lng = Number(pPrincipal.longitud) || -75.5579;
+
+    this.modalAbierto.set(true);
+    setTimeout(() => this.initMiniMap(lat, lng), 150);
+  }
+
+  // INTERRUPTOR MAESTRO (Apaga/Enciende Casa o TODO el Edificio)
+  toggleEstadoMaestro(estado: boolean) {
+    this.nuevaPropiedad.update(p => ({ ...p, activo: estado }));
+    if (this.esEdificio()) {
+      this.listaAptos.update(list => list.map(a => ({ ...a, activo: estado })));
     }
   }
 
-  removerApto(apto: string) {
-    this.listaAptos.update(list => list.filter(a => a !== apto));
+  // INTERRUPTOR INDIVIDUAL DE APARTAMENTOS
+  toggleAptoEstado(aptoNom: string, event: Event) {
+    event.stopPropagation();
+    this.listaAptos.update(list => list.map(a => a.nomenclatura === aptoNom ? { ...a, activo: !a.activo } : a));
+    
+    // Si enciendo 1, el edificio se marca activo. Si los apago todos, el edificio se marca inactivo
+    const algunActivo = this.listaAptos().some(a => a.activo);
+    this.nuevaPropiedad.update(p => ({ ...p, activo: algunActivo }));
   }
+
+  agregarApto(event?: Event) {
+    if (event) event.preventDefault(); 
+    const rawVal = this.aptoInput().trim();
+    if (!rawVal) return;
+
+    const nuevosAptosStr = rawVal.split(',').map(v => v.replace(/(apartamento|apto\.?|apt\.?)/gi, '').replace(/\s+/g, ' ').trim()).filter(v => v !== '');
+    const actualesStr = this.listaAptos().map(a => a.nomenclatura);
+    
+    // FIX: Forzamos el tipado estricto a booleano con "?? true"
+    const estadoEdificio = this.nuevaPropiedad().activo ?? true;
+    const filtradosObj = nuevosAptosStr.filter(n => !actualesStr.includes(n)).map(n => ({ nomenclatura: n, activo: estadoEdificio }));
+
+    if (filtradosObj.length > 0) {
+      const nuevaLista = [...this.listaAptos(), ...filtradosObj].sort((a, b) => 
+        b.nomenclatura.localeCompare(a.nomenclatura, undefined, { numeric: true, sensitivity: 'base' })
+      );
+      this.listaAptos.set(nuevaLista);
+      
+      const nombreEdificio = this.nuevaPropiedad().nombre || 'el edificio';
+      const ultimoAgregado = filtradosObj[filtradosObj.length - 1].nomenclatura;
+      
+      this.toastMessage.set(`✅ Apto ${ultimoAgregado} añadido a ${nombreEdificio}.`);
+      this.ultimoAptoAgregado.set(ultimoAgregado); 
+      
+      setTimeout(() => {
+        const elemento = document.getElementById(`apto-row-${ultimoAgregado}`);
+        if (elemento) elemento.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 50);
+      
+      setTimeout(() => {
+        this.toastMessage.set(null);
+        if (this.ultimoAptoAgregado() === ultimoAgregado) this.ultimoAptoAgregado.set(null);
+      }, 3000);
+    }
+    this.aptoInput.set('');
+  }
+
+  removerApto(aptoNom: string) {
+    const nombreEdificio = this.nuevaPropiedad().nombre || 'el edificio';
+    if (confirm(`⚠️ ¿Deseas eliminar permanentemente el Apto ${aptoNom} de ${nombreEdificio}?`)) {
+      
+      const elemento = document.getElementById(`apto-row-${aptoNom}`);
+      if (elemento) elemento.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+      this.aptosEliminando.update(list => [...list, aptoNom]);
+      
+      setTimeout(() => {
+        this.listaAptos.update(list => list.filter(a => a.nomenclatura !== aptoNom));
+        this.aptosEliminando.update(list => list.filter(a => a !== aptoNom));
+        
+        // Revisar si quedaron todos inactivos al borrar
+        const algunActivo = this.listaAptos().some(a => a.activo);
+        if(!algunActivo && this.listaAptos().length > 0) this.nuevaPropiedad.update(p => ({ ...p, activo: false }));
+
+        this.toastMessage.set(`🗑️ El Apto ${aptoNom} fue eliminado.`);
+        setTimeout(() => this.toastMessage.set(null), 3000);
+      }, 350); 
+    }
+  }
+
+  // --- LÓGICA BASE RESTANTE ---
 
   onImagenSeleccionada(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];
@@ -326,25 +432,9 @@ export class PropiedadesList implements OnInit, AfterViewInit {
         
         if (estaAdentro) {
           zonasIntersectadas.push(zona);
-          // ZONA ILUMINADA (Pin Adentro)
-          L.circle(zonaLatLng, { 
-            color: '#10b981', 
-            weight: 2, 
-            fillColor: '#10b981', 
-            fillOpacity: 0.25, // Brillante
-            radius: Number(zona.radio),
-            interactive: false 
-          }).addTo(this.zonasLayersLayer);
+          L.circle(zonaLatLng, { color: '#10b981', weight: 2, fillColor: '#10b981', fillOpacity: 0.25, radius: Number(zona.radio), interactive: false }).addTo(this.zonasLayersLayer);
         } else {
-          // ZONA APAGADA (Pin Afuera)
-          L.circle(zonaLatLng, { 
-            color: '#475569', // Borde gris slate
-            weight: 1, 
-            fillColor: '#334155', // Relleno gris oscuro
-            fillOpacity: 0.15, // Tenue
-            radius: Number(zona.radio),
-            interactive: false 
-          }).addTo(this.zonasLayersLayer);
+          L.circle(zonaLatLng, { color: '#475569', weight: 1, fillColor: '#334155', fillOpacity: 0.15, radius: Number(zona.radio), interactive: false }).addTo(this.zonasLayersLayer);
         }
       }
     });
@@ -385,44 +475,11 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     setTimeout(() => this.initMiniMap(lat, lng), 150);
   }
 
-  abrirEditorGrupo(props: Propiedad[], event?: Event) {
-    if (event) event.stopPropagation();
-    const esEdificio = props.length > 1;
-    // Usar la propiedad mejor formateada como base
-    const pPrincipal = props.find(p => p.nombre.includes(' - Apto ')) || props[0];
-
-    if (esEdificio) {
-      this.esEdificio.set(true);
-      this.propiedadesEdificioOriginal.set(props);
-      const nombreBase = pPrincipal.nombre.split(' - Apto ')[0] || pPrincipal.nombre;
-      
-      // Extraer el apto correctamente, incluso si se creó manualmente
-      this.listaAptos.set(props.map(h => {
-        return h.nombre.includes(' - Apto ') ? h.nombre.split(' - Apto ')[1] : h.nombre;
-      }).filter(a => a));
-      
-      this.editandoId.set(pPrincipal.id || 99999); 
-      this.nuevaPropiedad.set({ ...pPrincipal, nombre: nombreBase, zonas_ids: pPrincipal.zonas_ids || [] });
-    } else {
-      this.esEdificio.set(false);
-      this.propiedadesEdificioOriginal.set([]);
-      this.editandoId.set(pPrincipal.id || null);
-      this.nuevaPropiedad.set({ ...pPrincipal, zonas_ids: pPrincipal.zonas_ids || [] });
-    }
-
-    this.imagenPreview.set((pPrincipal as any).imagen_url || null);
-    const lat = Number(pPrincipal.latitud) || 6.3373;
-    const lng = Number(pPrincipal.longitud) || -75.5579;
-
-    this.modalAbierto.set(true);
-    setTimeout(() => this.initMiniMap(lat, lng), 150);
-  }
-
   eliminarGrupo(grupo: GrupoPropiedad, event: Event) {
     event.stopPropagation();
     const mensaje = grupo.esEdificio 
-      ? `¿Estás seguro de eliminar el edificio "${grupo.nombrePrincipal}" y todos sus ${grupo.propiedades.length} apartamentos?` 
-      : `¿Estás seguro de eliminar la propiedad "${grupo.nombrePrincipal}"?`;
+      ? `¿Seguro que deseas eliminar el edificio "${grupo.nombrePrincipal}" y sus ${grupo.propiedades.length} apartamentos?` 
+      : `¿Seguro que deseas eliminar la propiedad "${grupo.nombrePrincipal}"?`;
       
     if (confirm(mensaje)) {
       const requests = grupo.propiedades.map(p => this.adminService.deletePropiedad(p.id!));
@@ -439,41 +496,28 @@ export class PropiedadesList implements OnInit, AfterViewInit {
       if (!prop.qr_access_token) return;
       setTimeout(() => {
         const urlDestino = `https://airbnb-delivery-frontend.vercel.app/${prop.qr_access_token}`;
-        const urlDestinoEncoded = encodeURIComponent(urlDestino);
-        const url = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${urlDestinoEncoded}&color=0f172a&bgcolor=ffffff`;
-        
+        const url = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(urlDestino)}&color=0f172a&bgcolor=ffffff`;
         fetch(url).then(res => res.blob()).then(blob => {
-          const blobUrl = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
-          a.href = blobUrl;
+          a.href = window.URL.createObjectURL(blob);
           a.download = `QR_${prop.nombre.replace(/\s+/g, '_')}.png`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(blobUrl);
-        }).catch(() => console.error('Error descargando QR'));
-      }, index * 400); // Pequeño delay entre descargas para no saturar el navegador
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        }).catch(() => console.error('Error QR'));
+      }, index * 400); 
     });
   }
 
   descargarQRUnico(prop: Propiedad, event: Event) {
     event.stopPropagation();
     if (!prop.qr_access_token) return;
-    
     const urlDestino = `https://airbnb-delivery-frontend.vercel.app/${prop.qr_access_token}`;
-    const urlDestinoEncoded = encodeURIComponent(urlDestino);
-    const url = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${urlDestinoEncoded}&color=0f172a&bgcolor=ffffff`;
-    
+    const url = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(urlDestino)}&color=0f172a&bgcolor=ffffff`;
     fetch(url).then(res => res.blob()).then(blob => {
-      const blobUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = blobUrl;
+      a.href = window.URL.createObjectURL(blob);
       a.download = `QR_${prop.nombre.replace(/\s+/g, '_')}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(blobUrl);
-    }).catch(() => alert('Error descargando QR'));
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }).catch(() => alert('Error QR'));
   }
 
   cerrarModal() {
@@ -490,11 +534,12 @@ export class PropiedadesList implements OnInit, AfterViewInit {
       if (!this.esEdificio()) {
         this.adminService.createPropiedad(propData).subscribe({ next: () => { this.cargarDatos(); this.cerrarModal(); } });
       } else {
-        const requests = this.listaAptos().map(apto => {
+        const requests = this.listaAptos().map(aptoObj => {
           return this.adminService.createPropiedad({
             ...propData,
-            nombre: `${propData.nombre} - Apto ${apto}`,
-            direccion_apto: propData.direccion_apto
+            nombre: `${propData.nombre} - Apto ${aptoObj.nomenclatura}`,
+            direccion_apto: propData.direccion_apto,
+            activo: aptoObj.activo
           });
         });
         forkJoin(requests).subscribe({ next: () => { this.cargarDatos(); this.cerrarModal(); }, error: () => alert('Error creando edificio.') });
@@ -507,24 +552,17 @@ export class PropiedadesList implements OnInit, AfterViewInit {
       return;
     }
 
-    // ACTUALIZACIÓN DE EDIFICIO Y AUTOSANACIÓN
     const aptosActuales = this.listaAptos();
     const originales = this.propiedadesEdificioOriginal();
     const requests: any[] = [];
 
     originales.forEach(orig => {
-      // Identificar si era un apto formateado o uno rebelde manual
       const aptoOrig = orig.nombre.includes(' - Apto ') ? orig.nombre.split(' - Apto ')[1] : orig.nombre;
+      const aptoUI = aptosActuales.find(a => a.nomenclatura === aptoOrig);
       
-      if (aptosActuales.includes(aptoOrig)) {
+      if (aptoUI) {
         requests.push(this.adminService.updatePropiedad(orig.id!, { 
-          ...orig, 
-          nombre: `${propData.nombre} - Apto ${aptoOrig}`, 
-          direccion_apto: propData.direccion_apto, 
-          latitud: propData.latitud, 
-          longitud: propData.longitud, 
-          zonas_ids: propData.zonas_ids, 
-          imagen_url: propData.imagen_url 
+          ...orig, nombre: `${propData.nombre} - Apto ${aptoOrig}`, direccion_apto: propData.direccion_apto, latitud: propData.latitud, longitud: propData.longitud, zonas_ids: propData.zonas_ids, imagen_url: propData.imagen_url, activo: aptoUI.activo
         } as any));
       } else {
         requests.push(this.adminService.deletePropiedad(orig.id!));
@@ -532,13 +570,11 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     });
 
     const aptosOriginalesNombres = originales.map(o => o.nombre.includes(' - Apto ') ? o.nombre.split(' - Apto ')[1] : o.nombre);
-    const aptosNuevos = aptosActuales.filter(a => !aptosOriginalesNombres.includes(a));
+    const aptosNuevos = aptosActuales.filter(a => !aptosOriginalesNombres.includes(a.nomenclatura));
     
-    aptosNuevos.forEach(nuevo => {
+    aptosNuevos.forEach(nuevoObj => {
       requests.push(this.adminService.createPropiedad({ 
-        ...propData, 
-        nombre: `${propData.nombre} - Apto ${nuevo}`, 
-        direccion_apto: propData.direccion_apto // Mantenemos la dirección base
+        ...propData, nombre: `${propData.nombre} - Apto ${nuevoObj.nomenclatura}`, direccion_apto: propData.direccion_apto, activo: nuevoObj.activo
       }));
     });
 
