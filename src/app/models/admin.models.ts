@@ -40,6 +40,10 @@ export interface Propiedad {
   longitud?: number;
   zonas_ids?: number[];
   qr_access_token?: string;
+  airbnb_nombre?: string;
+  airbnb_telefono?: string;
+  airbnb_correo?: string;
+  imagen_url?: string | null; // <--- ESTA ES LA LÍNEA QUE FALTA
 }
 
 // Interfaz para la creación en lote (Edificios)

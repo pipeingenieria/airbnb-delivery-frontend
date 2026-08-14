@@ -76,4 +76,8 @@ export class AdminService {
   createAliado(aliado: Aliado): Observable<Aliado> {
     return this.http.post<Aliado>(`${this.apiUrl}/aliados`, aliado);
   }
+
+  notificarAirbnb(id: number) {
+    return this.http.post(`${this.apiUrl}/propiedades/${id}/notificar-airbnb`, {});
+  }
 }
