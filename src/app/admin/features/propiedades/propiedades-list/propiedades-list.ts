@@ -84,19 +84,23 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     return true;
   });
 
+  // AGRUPACIÓN Y ORDENAMIENTO (LÓGICA MAESTRA)
   gruposPropiedades = computed<GrupoPropiedad[]>(() => {
     const map = new Map<string, Propiedad[]>();
     this.propiedades().forEach(p => {
-      const key = (p.latitud && p.longitud) ? `${p.latitud},${p.longitud}` : `solo_${p.id}`;
+      // Normalizamos coordenadas a 5 decimales para evitar problemas de precisión
+      const key = (p.latitud && p.longitud) ? `${Number(p.latitud).toFixed(5)},${Number(p.longitud).toFixed(5)}` : `solo_${p.id}`;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(p);
     });
 
     const result: GrupoPropiedad[] = [];
     map.forEach((props, key) => {
-      const esEdificio = props.length > 1;
+      // SOLUCIÓN: Es edificio si hay más de 1, O si tiene la nomenclatura de apartamento
+      const esEdificio = props.length > 1 || props.some(p => p.nombre.includes(' - Apto '));
       const pPrincipal = props.find(p => p.nombre.includes(' - Apto ')) || props[0];
       const nombreBase = esEdificio ? pPrincipal.nombre.split(' - Apto ')[0] : pPrincipal.nombre;
+      
       const propsOrdenadas = props.sort((a,b) => b.nombre.localeCompare(a.nombre, undefined, { numeric: true, sensitivity: 'base' }));
 
       result.push({
@@ -114,20 +118,33 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     return result.sort((a,b) => a.nombrePrincipal.localeCompare(b.nombrePrincipal));
   });
 
+  // FILTRADO PROFUNDO CON ESTADO INDIVIDUAL
   gruposFiltrados = computed(() => {
     const term = this.filtroLista().toLowerCase().trim();
     const estado = this.filtroEstado();
     
-    let filtrados = this.gruposPropiedades();
+    // 1. Filtrar las propiedades internas de cada grupo según su estado
+    let filtrados = this.gruposPropiedades().map(grupo => {
+      let propsFiltradas = grupo.propiedades;
+      
+      if (estado === 'activos') {
+        propsFiltradas = propsFiltradas.filter(p => p.activo !== false);
+      } else if (estado === 'inactivos') {
+        propsFiltradas = propsFiltradas.filter(p => p.activo === false);
+      }
+      
+      // Retornar el grupo clonado con su nueva lista de propiedades filtradas
+      return { ...grupo, propiedades: propsFiltradas };
+    }).filter(grupo => grupo.propiedades.length > 0); // Ocultar el edificio si se quedó sin propiedades tras el filtro
     
-    if (estado === 'activos') filtrados = filtrados.filter(g => g.activo);
-    if (estado === 'inactivos') filtrados = filtrados.filter(g => !g.activo);
-    
+    // 2. Filtrar por término de búsqueda de texto
     if (!term) return filtrados;
+    
     return filtrados.filter(g => 
       g.nombrePrincipal.toLowerCase().includes(term) || 
       g.direccionBase.toLowerCase().includes(term) ||
-      g.propiedades.some(p => p.direccion_apto?.toLowerCase().includes(term))
+      g.propiedades.some(p => (p.direccion_apto || '').toLowerCase().includes(term)) ||
+      g.propiedades.some(p => (p.nombre || '').toLowerCase().includes(term)) // Buscar también por nomenclatura del apto
     );
   });
 
@@ -265,10 +282,11 @@ export class PropiedadesList implements OnInit, AfterViewInit {
 
   abrirEditorGrupo(props: Propiedad[], event?: Event) {
     if (event) event.stopPropagation();
-    const esEdificio = props.length > 1;
+    
+    // SOLUCIÓN: Validamos por cantidad o por nomenclatura
+    const esEdificio = props.length > 1 || props.some(p => p.nombre.includes(' - Apto '));
     const pPrincipal = props.find(p => p.nombre.includes(' - Apto ')) || props[0];
 
-    // Calcula si el edificio entero está activo (si hay al menos 1 apto activo)
     const edificioActivo = props.some(p => p.activo !== false);
 
     if (esEdificio) {
@@ -529,6 +547,34 @@ export class PropiedadesList implements OnInit, AfterViewInit {
   guardarDatos() {
     if (!this.formularioValido()) return;
     const propData = this.nuevaPropiedad();
+
+    // --- ESCUDO PREVENCIÓN DE DUPLICADOS ---
+    const latFix = Number(propData.latitud).toFixed(5);
+    const lngFix = Number(propData.longitud).toFixed(5);
+    const dirText = (propData.direccion_apto || '').toLowerCase().trim();
+
+    // Obtenemos los IDs del grupo actual (si estamos editando) para ignorarlos en la validación
+    const idsOriginales = this.esEdificio() 
+      ? this.propiedadesEdificioOriginal().map(p => p.id) 
+      : (this.editandoId() ? [this.editandoId()] : []);
+
+    const existeConflicto = this.propiedades().some(p => {
+      // Ignorar las propiedades del mismo edificio que estamos editando
+      if (p.id && idsOriginales.includes(p.id)) return false; 
+      
+      const pLatFix = Number(p.latitud).toFixed(5);
+      const pLngFix = Number(p.longitud).toFixed(5);
+      const pDirText = (p.direccion_apto || '').toLowerCase().trim();
+
+      // Conflicto si la dirección de texto es idéntica o el pin está en la misma coordenada
+      return (pLatFix === latFix && pLngFix === lngFix) || (pDirText === dirText);
+    });
+
+    if (existeConflicto) {
+      alert('🚫 ACCIÓN BLOQUEADA: Ya existe una propiedad o edificio registrado en esta dirección exacta o en las mismas coordenadas del mapa.\n\nPara agregar apartamentos a un edificio existente, búscalo en el directorio lateral o haz doble clic sobre su pin en el mapa y añade las unidades desde allí.');
+      return;
+    }
+    // ----------------------------------------
 
     if (!this.editandoId()) {
       if (!this.esEdificio()) {
