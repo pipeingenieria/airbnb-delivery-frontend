@@ -44,8 +44,12 @@ export class PropiedadesList implements OnInit, AfterViewInit {
   ultimoAptoAgregado = signal<string | null>(null);
   aptosEliminando = signal<string[]>([]);
 
+  // NUEVO: Estado para controlar la animación de celebración
+  showCelebration = signal<boolean>(false);
+
   modalContactoAbierto = signal<boolean>(false);
   aptoEnContacto = signal<AptoUI | null>(null);
+  contactoEdicionDirecta = signal<Propiedad | null>(null);
 
   propiedades = signal<Propiedad[]>([]);
   zonasActivas = signal<Zona[]>([]);
@@ -64,7 +68,7 @@ export class PropiedadesList implements OnInit, AfterViewInit {
   aptoInput = signal<string>('');
   
   filtroLista = signal<string>('');
-  filtroEstado = signal<'todos' | 'activos' | 'inactivos'>('todos');
+  filtroEstado = signal<'todos' | 'activos' | 'inactivos' | 'falta_contacto'>('todos');
   paginaActual = signal<number>(1);
   itemsPorPagina = 4;
   
@@ -72,7 +76,6 @@ export class PropiedadesList implements OnInit, AfterViewInit {
   propiedadesEdificioOriginal = signal<Propiedad[]>([]);
   zonasQueCubren = signal<Zona[]>([]);
 
-  // Ya no necesitamos el parche porque el modelo Propiedad ya incluye imagen_url
   nuevaPropiedad = signal<Propiedad>({
     nombre: '',
     direccion_apto: '',
@@ -119,7 +122,7 @@ export class PropiedadesList implements OnInit, AfterViewInit {
       const nombreBase = esEdificio ? pPrincipal.nombre.split(' - Apto ')[0] : pPrincipal.nombre;
       const propsOrdenadas = props.sort((a,b) => b.nombre.localeCompare(a.nombre, undefined, { numeric: true, sensitivity: 'base' }));
       
-      const grupoFaltaContacto = props.some(p => !p.airbnb_nombre || !p.airbnb_correo);
+      const grupoFaltaContacto = props.some(p => !p.airbnb_nombre || !p.airbnb_correo || !p.airbnb_telefono);
 
       result.push({
         id: key,
@@ -145,7 +148,12 @@ export class PropiedadesList implements OnInit, AfterViewInit {
       let propsFiltradas = grupo.propiedades;
       if (estado === 'activos') propsFiltradas = propsFiltradas.filter(p => p.activo !== false);
       else if (estado === 'inactivos') propsFiltradas = propsFiltradas.filter(p => p.activo === false);
-      return { ...grupo, propiedades: propsFiltradas };
+      else if (estado === 'falta_contacto') propsFiltradas = propsFiltradas.filter(p => !p.airbnb_nombre || !p.airbnb_correo || !p.airbnb_telefono);
+      
+      const grupoFaltaContacto = propsFiltradas.some(p => !p.airbnb_nombre || !p.airbnb_correo || !p.airbnb_telefono);
+      const grupoActivo = propsFiltradas.some(p => p.activo !== false);
+
+      return { ...grupo, propiedades: propsFiltradas, faltaContacto: grupoFaltaContacto, activo: grupoActivo };
     }).filter(grupo => grupo.propiedades.length > 0);
     
     if (!term) return filtrados;
@@ -153,7 +161,10 @@ export class PropiedadesList implements OnInit, AfterViewInit {
       g.nombrePrincipal.toLowerCase().includes(term) || 
       g.direccionBase.toLowerCase().includes(term) ||
       g.propiedades.some(p => (p.direccion_apto || '').toLowerCase().includes(term)) ||
-      g.propiedades.some(p => (p.nombre || '').toLowerCase().includes(term))
+      g.propiedades.some(p => (p.nombre || '').toLowerCase().includes(term)) ||
+      g.propiedades.some(p => (p.airbnb_nombre || '').toLowerCase().includes(term)) ||
+      g.propiedades.some(p => (p.airbnb_correo || '').toLowerCase().includes(term)) ||
+      g.propiedades.some(p => (p.airbnb_telefono || '').toLowerCase().includes(term))
     );
   });
 
@@ -170,6 +181,7 @@ export class PropiedadesList implements OnInit, AfterViewInit {
   private miniMapMarker: L.Marker | null = null;
   private zonasLayersLayer = L.layerGroup(); 
 
+  // MÉTODOS BASE Y MAPA
   toggleEdificio(id: string, event: Event) {
     event.stopPropagation();
     this.edificiosExpandidos.update(state => ({ ...state, [id]: !state[id] }));
@@ -177,6 +189,12 @@ export class PropiedadesList implements OnInit, AfterViewInit {
 
   ngOnInit() { this.cargarDatos(); }
   ngAfterViewInit() { this.initMainMap(); }
+
+  // ANIMACIÓN DE NUEVO ALIADO
+  lanzarCelebracion() {
+    this.showCelebration.set(true);
+    setTimeout(() => this.showCelebration.set(false), 4500);
+  }
 
   cargarDatos() {
     this.cargando.set(true);
@@ -320,7 +338,7 @@ export class PropiedadesList implements OnInit, AfterViewInit {
       });
     }
 
-    this.imagenPreview.set((pPrincipal as any).imagen_url || null);
+    this.imagenPreview.set(pPrincipal.imagen_url || null);
     const lat = Number(pPrincipal.latitud) || 6.3373;
     const lng = Number(pPrincipal.longitud) || -75.5579;
 
@@ -355,7 +373,7 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     if (!apto) return;
 
     if (!apto.airbnb_nombre || !apto.airbnb_correo || !apto.airbnb_telefono) {
-      this.toastMessage.set('⚠️ Bloqueado: Completa los datos de contacto del anfitrión (Doble clic) antes de activar.');
+      this.toastMessage.set('⚠️ Bloqueado: Completa los datos de contacto del anfitrión antes de activar.');
       setTimeout(() => this.toastMessage.set(null), 4500);
       return;
     }
@@ -386,7 +404,7 @@ export class PropiedadesList implements OnInit, AfterViewInit {
       const nombreEdificio = this.nuevaPropiedad().nombre || 'el edificio';
       const ultimoAgregado = filtradosObj[filtradosObj.length - 1].nomenclatura;
       
-      this.toastMessage.set(`✅ Apto ${ultimoAgregado} añadido. Haz doble clic para agregar el contacto.`);
+      this.toastMessage.set(`✅ Apto ${ultimoAgregado} añadido. Edita el contacto para activarlo.`);
       this.ultimoAptoAgregado.set(ultimoAgregado); 
       
       setTimeout(() => {
@@ -420,9 +438,27 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     }
   }
 
-  // --- LÓGICA DEL MODAL DE CONTACTO (APARTAMENTOS) ---
+  // --- LÓGICA DEL MODAL DE CONTACTO UNIFICADO ---
 
-  abrirModalContacto(aptoNom: string, event: Event) {
+  abrirContactoDesdeDirectorio(prop: Propiedad, event: Event) {
+    event.stopPropagation();
+    event.preventDefault();
+    this.contactoEdicionDirecta.set(prop);
+    const nom = prop.nombre.includes(' - Apto ') ? prop.nombre.split(' - Apto ')[1] : prop.nombre;
+    
+    this.aptoEnContacto.set({
+      id: prop.id,
+      nomenclatura: nom,
+      activo: prop.activo !== undefined ? prop.activo : false,
+      airbnb_nombre: prop.airbnb_nombre || '',
+      airbnb_telefono: prop.airbnb_telefono || '',
+      airbnb_correo: prop.airbnb_correo || '',
+      qr_access_token: prop.qr_access_token || ''
+    });
+    this.modalContactoAbierto.set(true);
+  }
+
+  abrirModalContactoApto(aptoNom: string, event: Event) {
     event.stopPropagation();
     const apto = this.listaAptos().find(a => a.nomenclatura === aptoNom);
     if (apto) {
@@ -431,9 +467,25 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     }
   }
 
+  abrirModalContactoIndiv(event: Event) {
+    if (event) event.preventDefault();
+    const p = this.nuevaPropiedad();
+    this.aptoEnContacto.set({
+      id: this.editandoId() || undefined,
+      nomenclatura: 'Propiedad Individual',
+      activo: p.activo || false,
+      airbnb_nombre: p.airbnb_nombre || '',
+      airbnb_telefono: p.airbnb_telefono || '',
+      airbnb_correo: p.airbnb_correo || '',
+      qr_access_token: p.qr_access_token || ''
+    });
+    this.modalContactoAbierto.set(true);
+  }
+
   cerrarModalContacto() {
     this.modalContactoAbierto.set(false);
     this.aptoEnContacto.set(null);
+    this.contactoEdicionDirecta.set(null);
   }
 
   guardarContacto() {
@@ -448,10 +500,58 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     
     if (faltaInfo) {
        modificado.activo = false;
-       this.toastMessage.set(`⚠️ Faltan datos. El apartamento no se puede activar sin la info completa.`);
+       this.toastMessage.set(`⚠️ Faltan datos. La propiedad no se puede activar sin la info completa.`);
        setTimeout(() => this.toastMessage.set(null), 5000);
     } else {
        modificado.activo = true;
+    }
+
+    const directa = this.contactoEdicionDirecta();
+
+    if (directa && directa.id) {
+       const original = this.propiedades().find(p => p.id === directa.id);
+       if (original) {
+          const teniaCorreoAntes = !!original.airbnb_correo;
+          const tieneCorreoAhora = !!modificado.airbnb_correo;
+          const esPrimeraVez = !teniaCorreoAntes && tieneCorreoAhora;
+
+          this.adminService.updatePropiedad(directa.id, {
+             ...original,
+             activo: modificado.activo,
+             airbnb_nombre: modificado.airbnb_nombre,
+             airbnb_telefono: modificado.airbnb_telefono,
+             airbnb_correo: modificado.airbnb_correo
+          }).subscribe({
+             next: () => {
+                if (!faltaInfo) {
+                  if (esPrimeraVez) {
+                      this.adminService.notificarAirbnb(directa.id!).subscribe();
+                      this.toastMessage.set(`🎉 Contacto guardado. Notificación enviada a ${modificado.airbnb_nombre}.`);
+                      this.lanzarCelebracion();
+                  } else {
+                      this.toastMessage.set(`🎉 Contacto actualizado y propiedad activada.`);
+                  }
+                  setTimeout(() => this.toastMessage.set(null), 5000);
+                }
+                this.cargarDatos(); 
+                this.cerrarModalContacto();
+             },
+             error: () => alert('Error guardando contacto directo.')
+          });
+       }
+       return;
+    }
+
+    if (!this.esEdificio()) {
+      this.nuevaPropiedad.update(p => ({
+         ...p,
+         activo: modificado.activo,
+         airbnb_nombre: modificado.airbnb_nombre,
+         airbnb_telefono: modificado.airbnb_telefono,
+         airbnb_correo: modificado.airbnb_correo
+      }));
+      this.cerrarModalContacto();
+      return;
     }
 
     this.listaAptos.update(list => list.map(a => a.nomenclatura === modificado.nomenclatura ? modificado : a));
@@ -474,7 +574,8 @@ export class PropiedadesList implements OnInit, AfterViewInit {
                 if (!faltaInfo) {
                   if (esPrimeraVez) {
                       this.adminService.notificarAirbnb(modificado.id!).subscribe();
-                      this.toastMessage.set(`🎉 Apto activado. Notificación automática enviada a ${modificado.airbnb_nombre}.`);
+                      this.toastMessage.set(`🎉 Apto activado. Notificación enviada a ${modificado.airbnb_nombre}.`);
+                      this.lanzarCelebracion();
                   } else {
                       this.toastMessage.set(`🎉 ¡Felicitaciones! Apto actualizado y activado correctamente.`);
                   }
@@ -493,13 +594,13 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     this.cerrarModalContacto();
   }
 
-  notificarContacto(aptoNom: string, event: Event) {
+  notificarContacto(event: Event) {
     event.stopPropagation();
     const apto = this.aptoEnContacto();
     if (!apto || !apto.airbnb_correo) return;
 
     if (!apto.id) {
-       this.toastMessage.set(`⚠️ Debes guardar el apartamento primero antes de enviar correos.`);
+       this.toastMessage.set(`⚠️ Debes guardar la propiedad primero antes de enviar correos.`);
        setTimeout(() => this.toastMessage.set(null), 4000);
        return;
     }
@@ -507,7 +608,7 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     this.toastMessage.set(`📧 Conectando con el servidor para notificar a ${apto.airbnb_correo}...`);
     this.adminService.notificarAirbnb(apto.id).subscribe({
        next: () => {
-          this.toastMessage.set(`✅ Notificación oficial enviada con éxito a ${apto.airbnb_nombre}.`);
+          this.toastMessage.set(`✅ Notificación enviada con éxito a ${apto.airbnb_nombre}.`);
           setTimeout(() => this.toastMessage.set(null), 5000);
        },
        error: () => {
@@ -517,7 +618,6 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     });
   }
 
-  // --- BOTÓN MANUAL PARA NOTIFICAR PROPIEDADES INDIVIDUALES ---
   notificarContactoIndividual() {
     const p = this.nuevaPropiedad();
     if (!this.editandoId() || !p.airbnb_correo) return;
@@ -624,7 +724,7 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     this.propiedadesEdificioOriginal.set([]);
     this.aptoInput.set('');
     this.imagenPreview.set(null);
-    this.nuevaPropiedad.set({ nombre: '', direccion_apto: 'Buscando...', activo: true, latitud: lat, longitud: lng, zonas_ids: [], airbnb_nombre: '', airbnb_telefono: '', airbnb_correo: '' });
+    this.nuevaPropiedad.set({ nombre: '', direccion_apto: 'Buscando...', activo: true, latitud: lat, longitud: lng, zonas_ids: [], airbnb_nombre: '', airbnb_telefono: '', airbnb_correo: '', imagen_url: null });
     this.modalAbierto.set(true);
     
     this.obtenerDireccionAutomatica(lat, lng);
@@ -705,7 +805,6 @@ export class PropiedadesList implements OnInit, AfterViewInit {
       return;
     }
 
-    // LÓGICA DE PROPIEDADES INDIVIDUALES (Limpieza y Validación de Contacto)
     if (!this.esEdificio()) {
        propData.airbnb_nombre = propData.airbnb_nombre?.trim() || '';
        propData.airbnb_correo = propData.airbnb_correo?.trim() || '';
@@ -726,8 +825,8 @@ export class PropiedadesList implements OnInit, AfterViewInit {
           next: (res) => { 
             if (propData.airbnb_correo && propData.activo) {
                this.adminService.notificarAirbnb(res.id!).subscribe();
-               this.toastMessage.set(`🎉 Propiedad creada. Notificación automática enviada a ${propData.airbnb_nombre}.`);
-               setTimeout(() => this.toastMessage.set(null), 5000);
+               this.toastMessage.set(`🎉 Propiedad creada. Notificación enviada a ${propData.airbnb_nombre}.`);
+               this.lanzarCelebracion();
             }
             this.cargarDatos(); this.cerrarModal(); 
           } 
@@ -744,7 +843,14 @@ export class PropiedadesList implements OnInit, AfterViewInit {
             airbnb_correo: aptoObj.airbnb_correo
           });
         });
-        forkJoin(requests).subscribe({ next: () => { this.cargarDatos(); this.cerrarModal(); }, error: () => alert('Error creando edificio.') });
+        forkJoin(requests).subscribe({ 
+          next: () => { 
+             this.toastMessage.set(`✅ Edificio creado. Ingresa a cada apartamento para activar anfitriones.`);
+             setTimeout(() => this.toastMessage.set(null), 4000);
+             this.cargarDatos(); this.cerrarModal(); 
+          }, 
+          error: () => alert('Error creando edificio.') 
+        });
       }
       return;
     }
@@ -761,8 +867,8 @@ export class PropiedadesList implements OnInit, AfterViewInit {
         next: () => { 
           if (esPrimeraVez && propData.activo) {
              this.adminService.notificarAirbnb(this.editandoId()!).subscribe();
-             this.toastMessage.set(`🎉 Propiedad actualizada. Notificación automática enviada a ${propData.airbnb_nombre}.`);
-             setTimeout(() => this.toastMessage.set(null), 5000);
+             this.toastMessage.set(`🎉 Propiedad actualizada. Notificación enviada a ${propData.airbnb_nombre}.`);
+             this.lanzarCelebracion();
           }
           this.cargarDatos(); this.cerrarModal(); 
         } 
@@ -773,12 +879,20 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     const aptosActuales = this.listaAptos();
     const originales = this.propiedadesEdificioOriginal();
     const requests: any[] = [];
+    
+    // Verificamos si en la edición general del edificio algún apartamento se activó por primera vez
+    let algunAptoNuevoActivado = false;
 
     originales.forEach(orig => {
       const aptoOrig = orig.nombre.includes(' - Apto ') ? orig.nombre.split(' - Apto ')[1] : orig.nombre;
       const aptoUI = aptosActuales.find(a => a.nomenclatura === aptoOrig);
       
       if (aptoUI) {
+        if (!orig.airbnb_correo && aptoUI.airbnb_correo && aptoUI.activo) {
+            algunAptoNuevoActivado = true;
+            this.adminService.notificarAirbnb(orig.id!).subscribe();
+        }
+
         requests.push(this.adminService.updatePropiedad(orig.id!, { 
           ...orig, 
           nombre: `${propData.nombre} - Apto ${aptoOrig}`, 
@@ -801,6 +915,7 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     const aptosNuevos = aptosActuales.filter(a => !aptosOriginalesNombres.includes(a.nomenclatura));
     
     aptosNuevos.forEach(nuevoObj => {
+      // Los aptos nuevos recién creados en el form nacen sin datos de anfitrión, por ende no se activan automáticamente aquí
       requests.push(this.adminService.createPropiedad({ 
         ...propData, 
         nombre: `${propData.nombre} - Apto ${nuevoObj.nomenclatura}`, 
@@ -812,7 +927,19 @@ export class PropiedadesList implements OnInit, AfterViewInit {
       }));
     });
 
-    forkJoin(requests).subscribe({ next: () => { this.cargarDatos(); this.cerrarModal(); }, error: () => alert('Error sincronizando el edificio.') });
+    forkJoin(requests).subscribe({ 
+      next: () => { 
+        if (algunAptoNuevoActivado) {
+            this.toastMessage.set(`🎉 Actualización exitosa. Correos enviados a los nuevos anfitriones.`);
+            this.lanzarCelebracion();
+        } else {
+            this.toastMessage.set(`✅ Edificio sincronizado correctamente.`);
+            setTimeout(() => this.toastMessage.set(null), 4000);
+        }
+        this.cargarDatos(); this.cerrarModal(); 
+      }, 
+      error: () => alert('Error sincronizando el edificio.') 
+    });
   }
 
   centrarEnPropiedad(grupo: GrupoPropiedad) {
@@ -844,6 +971,44 @@ export class PropiedadesList implements OnInit, AfterViewInit {
         this.calcularCobertura(lat, lng);
       }
     } catch (e) { }
+  }
+
+  // --- GESTIÓN GLOBAL DE TOOLTIPS FLOTANTES ---
+  mostrarTooltip(event: MouseEvent, texto: string) {
+    const target = event.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+
+    const tooltip = document.createElement('div');
+    tooltip.id = 'global-custom-tooltip';
+    tooltip.textContent = texto;
+    tooltip.style.position = 'fixed';
+    tooltip.style.backgroundColor = 'rgba(15, 23, 42, 0.95)';
+    tooltip.style.backdropFilter = 'blur(4px)';
+    tooltip.style.color = '#f8fafc';
+    tooltip.style.padding = '6px 12px';
+    tooltip.style.borderRadius = '8px';
+    tooltip.style.fontSize = '11px';
+    tooltip.style.fontWeight = '600';
+    tooltip.style.letterSpacing = '0.3px';
+    tooltip.style.whiteSpace = 'nowrap';
+    tooltip.style.zIndex = '999999';
+    tooltip.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+    tooltip.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.5)';
+    tooltip.style.pointerEvents = 'none';
+
+    document.body.appendChild(tooltip);
+
+    const tRect = tooltip.getBoundingClientRect();
+    const left = rect.left + (rect.width / 2) - (tRect.width / 2);
+    const top = rect.top - tRect.height - 8;
+
+    tooltip.style.left = `${Math.max(10, left)}px`;
+    tooltip.style.top = `${top}px`;
+  }
+
+  ocultarTooltip() {
+    const tooltip = document.getElementById('global-custom-tooltip');
+    if (tooltip) tooltip.remove();
   }
 
   actualizarFiltroLista(e: any) { this.filtroLista.set(e.target.value); this.paginaActual.set(1); }
