@@ -642,24 +642,27 @@ export class PropiedadesList implements OnInit, AfterViewInit {
   async onImagenSeleccionada(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (file) {
-      // 1. Mostrar preview local rapidísimo (sin esperar compresión)
+      // 1. Guardar la URL vieja en memoria por si necesitamos destruirla
+      const urlAntigua = this.nuevaPropiedad().imagen_url;
+
       const reader = new FileReader();
       reader.onload = () => this.imagenPreview.set(reader.result as string);
       reader.readAsDataURL(file);
 
-      // 2. Bloquear UI y avisar al usuario
       this.subiendoImagen.set(true);
       this.toastMessage.set('⚙️ Optimizando resolución y subiendo a la nube...');
 
       try {
-        // 3. COMPRESIÓN FRONTEND (De 6MB a ~200KB en milisegundos)
         const archivoOptimizado = await this.comprimirImagenProfesional(file);
 
-        // 4. Enviar archivo súper ligero al Backend
         this.adminService.uploadImagen(archivoOptimizado).subscribe({
           next: (res) => {
-            // 5. AUTO-FORMAT DELIVERY (Añadimos q_auto,f_auto a la URL de respuesta)
             const urlFinal = this.optimizarUrlCloudinary(res.url);
+
+            // 💥 DESTRUCCIÓN DE LA IMAGEN ANTERIOR (Ahorro de espacio en Cloudinary)
+            if (urlAntigua && urlAntigua.includes('cloudinary')) {
+              this.adminService.deleteImagen(urlAntigua).subscribe(); // Se ejecuta de forma silenciosa
+            }
 
             this.nuevaPropiedad.update(p => ({ ...p, imagen_url: urlFinal }));
             this.subiendoImagen.set(false);
@@ -669,14 +672,15 @@ export class PropiedadesList implements OnInit, AfterViewInit {
           },
           error: () => {
             this.subiendoImagen.set(false);
-            this.imagenPreview.set(null);
+            // Revertimos el preview si falla
+            this.imagenPreview.set(urlAntigua || null);
             this.toastMessage.set('❌ Error de conexión al subir la imagen. Intenta de nuevo.');
             setTimeout(() => this.toastMessage.set(null), 4000);
           }
         });
       } catch (error) {
         this.subiendoImagen.set(false);
-        this.imagenPreview.set(null);
+        this.imagenPreview.set(urlAntigua || null);
         this.toastMessage.set('❌ Hubo un error al intentar comprimir la imagen en tu dispositivo.');
         setTimeout(() => this.toastMessage.set(null), 4000);
       }
@@ -772,6 +776,11 @@ export class PropiedadesList implements OnInit, AfterViewInit {
       : `¿Seguro que deseas eliminar la propiedad "${grupo.nombrePrincipal}"?`;
       
     if (confirm(mensaje)) {
+      // 💥 Destruir la imagen de Cloudinary al eliminar el grupo completo
+      if (grupo.imagen_url && grupo.imagen_url.includes('cloudinary')) {
+         this.adminService.deleteImagen(grupo.imagen_url).subscribe(); // Disparo silencioso
+      }
+
       const requests = grupo.propiedades.map(p => this.adminService.deletePropiedad(p.id!));
       forkJoin(requests).subscribe({
         next: () => this.cargarDatos(),

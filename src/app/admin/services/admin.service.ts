@@ -89,4 +89,8 @@ export class AdminService {
     formData.append('file', file);
     return this.http.post<{url: string}>(`${this.apiUrl}/upload-imagen`, formData);
   }
+
+  deleteImagen(url: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/upload-imagen/delete`, { url });
+  }
 }
