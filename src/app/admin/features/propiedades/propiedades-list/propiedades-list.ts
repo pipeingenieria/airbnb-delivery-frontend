@@ -36,6 +36,7 @@ export interface AptoUI {
   templateUrl: './propiedades-list.html'
 })
 export class PropiedadesList implements OnInit, AfterViewInit {
+  subiendoImagen = signal<boolean>(false);
   private adminService = inject(AdminService);
   
   edificiosExpandidos = signal<Record<string, boolean>>({});
@@ -99,6 +100,7 @@ export class PropiedadesList implements OnInit, AfterViewInit {
   });
 
   formularioValido = computed(() => {
+    if (this.subiendoImagen()) return false; // Bloquea el botón si está subiendo
     const prop = this.nuevaPropiedad();
     if (!prop.nombre || prop.nombre.trim() === '') return false;
     if (!this.esDireccionValida()) return false;
@@ -637,15 +639,47 @@ export class PropiedadesList implements OnInit, AfterViewInit {
 
   // --- LÓGICA BASE RESTANTE ---
 
-  onImagenSeleccionada(event: Event) {
+  async onImagenSeleccionada(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (file) {
+      // 1. Mostrar preview local rapidísimo (sin esperar compresión)
       const reader = new FileReader();
-      reader.onload = () => {
-        this.imagenPreview.set(reader.result as string);
-        this.nuevaPropiedad.update(p => ({ ...p, imagen_url: reader.result as string }));
-      };
+      reader.onload = () => this.imagenPreview.set(reader.result as string);
       reader.readAsDataURL(file);
+
+      // 2. Bloquear UI y avisar al usuario
+      this.subiendoImagen.set(true);
+      this.toastMessage.set('⚙️ Optimizando resolución y subiendo a la nube...');
+
+      try {
+        // 3. COMPRESIÓN FRONTEND (De 6MB a ~200KB en milisegundos)
+        const archivoOptimizado = await this.comprimirImagenProfesional(file);
+
+        // 4. Enviar archivo súper ligero al Backend
+        this.adminService.uploadImagen(archivoOptimizado).subscribe({
+          next: (res) => {
+            // 5. AUTO-FORMAT DELIVERY (Añadimos q_auto,f_auto a la URL de respuesta)
+            const urlFinal = this.optimizarUrlCloudinary(res.url);
+
+            this.nuevaPropiedad.update(p => ({ ...p, imagen_url: urlFinal }));
+            this.subiendoImagen.set(false);
+            
+            this.toastMessage.set('✅ Fotografía ultra-optimizada y guardada con éxito.');
+            setTimeout(() => this.toastMessage.set(null), 3000);
+          },
+          error: () => {
+            this.subiendoImagen.set(false);
+            this.imagenPreview.set(null);
+            this.toastMessage.set('❌ Error de conexión al subir la imagen. Intenta de nuevo.');
+            setTimeout(() => this.toastMessage.set(null), 4000);
+          }
+        });
+      } catch (error) {
+        this.subiendoImagen.set(false);
+        this.imagenPreview.set(null);
+        this.toastMessage.set('❌ Hubo un error al intentar comprimir la imagen en tu dispositivo.');
+        setTimeout(() => this.toastMessage.set(null), 4000);
+      }
     }
   }
 
@@ -1009,6 +1043,76 @@ export class PropiedadesList implements OnInit, AfterViewInit {
   ocultarTooltip() {
     const tooltip = document.getElementById('global-custom-tooltip');
     if (tooltip) tooltip.remove();
+  }
+
+  // ==========================================
+  // MOTOR DE OPTIMIZACIÓN DE IMÁGENES
+  // ==========================================
+
+  /**
+   * Modifica la URL de Cloudinary para inyectar q_auto (calidad automática)
+   * y f_auto (formato automático: AVIF, WebP o JPEG según el navegador del usuario).
+   */
+  private optimizarUrlCloudinary(url: string): string {
+    if (!url.includes('cloudinary.com')) return url;
+    // Interceptamos la URL y añadimos los parámetros mágicos justo después de "/upload/"
+    return url.replace('/upload/', '/upload/q_auto,f_auto/');
+  }
+
+  /**
+   * Comprime la imagen pesada del usuario directamente en la memoria de su navegador
+   * usando Canvas HTML5, redimensionándola a un tamaño web óptimo y formato WebP.
+   */
+  private async comprimirImagenProfesional(file: File, maxWidth = 1280, maxHeight = 1280, quality = 0.8): Promise<File> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        
+        img.onload = () => {
+          // Calculamos las nuevas dimensiones manteniendo el Aspect Ratio
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height && width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+
+          // Creamos un lienzo digital (Canvas)
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return reject('No se pudo crear el contexto del canvas');
+
+          // Dibujamos la imagen redimensionada
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Exportamos a WebP con calidad del 80% (Pérdida invisible al ojo humano pero altísima compresión)
+          canvas.toBlob((blob) => {
+            if (!blob) return reject('Error al comprimir la imagen');
+            
+            // Reconstruimos el archivo con la nueva data comprimida
+            const nombreLimpio = file.name.replace(/\.[^/.]+$/, ""); // Quita la extensión original
+            const compressedFile = new File([blob], `${nombreLimpio}_optimizada.webp`, {
+              type: 'image/webp',
+              lastModified: Date.now(),
+            });
+            resolve(compressedFile);
+          }, 'image/webp', quality);
+        };
+        img.onerror = (error) => reject(error);
+      };
+      reader.onerror = (error) => reject(error);
+    });
   }
 
   actualizarFiltroLista(e: any) { this.filtroLista.set(e.target.value); this.paginaActual.set(1); }

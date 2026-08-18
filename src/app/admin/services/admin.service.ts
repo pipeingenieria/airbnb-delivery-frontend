@@ -80,4 +80,13 @@ export class AdminService {
   notificarAirbnb(id: number) {
     return this.http.post(`${this.apiUrl}/propiedades/${id}/notificar-airbnb`, {});
   }
+
+  // ==========================================
+  // IMÁGENES (Cloudinary)
+  // ==========================================
+  uploadImagen(file: File): Observable<{url: string}> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<{url: string}>(`${this.apiUrl}/upload-imagen`, formData);
+  }
 }
