@@ -54,3 +54,12 @@ export interface PropiedadBatchCreate {
   apartamentos: string[];
   zonas_ids: number[];
 }
+
+export interface Categoria {
+  id?: number;
+  nombre: string;
+  descripcion?: string;
+  icono?: string;
+  activo: boolean;
+  requiere_despacho: boolean;
+}

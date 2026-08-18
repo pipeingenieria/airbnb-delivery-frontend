@@ -43,6 +43,14 @@ export class AdminService {
     return this.http.post<Categoria>(`${this.apiUrl}/categorias`, categoria);
   }
 
+  updateCategoria(id: number, categoria: Partial<Categoria>): Observable<Categoria> {
+    return this.http.put<Categoria>(`${this.apiUrl}/categorias/${id}`, categoria);
+  }
+
+  deleteCategoria(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/categorias/${id}`);
+  }
+
   /// ==========================================
   // PROPIEDADES (Apartamentos y Edificios)
   // ==========================================

@@ -1,1 +1,208 @@
-<p>categorias-list works!</p>
+<style>
+  @keyframes toastPremiumSpring {
+    0% { opacity: 0; transform: translate(-50%, -20px) scale(0.9); }
+    100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  }
+  .animate-toast-premium { animation: toastPremiumSpring 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+  
+  /* EL FIX MÁGICO: Terminar en 'transform: none' destruye la cárcel del contenedor */
+  .animate-entrance-fixed { animation: fadeInFixed 0.4s ease-out forwards; }
+  @keyframes fadeInFixed { 
+    from { opacity: 0; transform: translateY(10px); } 
+    to { opacity: 1; transform: none; } 
+  }
+</style>
+
+<!-- TOAST NOTIFICATION -->
+@if (toastMessage()) {
+  <div class="fixed top-6 left-1/2 -translate-x-1/2 z-[9999] animate-toast-premium pointer-events-none w-[90%] max-w-md">
+    <div class="px-5 py-3 rounded-2xl shadow-[0_0_25px_rgba(99,102,241,0.3)] border border-indigo-500/50 bg-slate-900/95 text-white text-[13px] font-semibold flex items-start gap-3 backdrop-blur-xl">
+      <span class="whitespace-normal break-words leading-tight flex-1">{{ toastMessage() }}</span>
+    </div>
+  </div>
+}
+
+<!-- CONTENEDOR PRINCIPAL -->
+<div class="space-y-6 flex flex-col w-full animate-entrance-fixed">
+  
+  <!-- HEADER -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Categorías de Negocio</h2>
+      <p class="text-xs sm:text-sm text-slate-400 mt-1">Define las líneas de negocio que verán los usuarios en la app.</p>
+    </div>
+
+    <div class="flex flex-col sm:flex-row gap-3">
+      <div class="relative w-full sm:w-64">
+        <input type="text" [ngModel]="filtroTexto()" (input)="actualizarFiltro($event)" placeholder="Buscar categoría..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-400 text-sm focus:outline-none focus:border-blue-500 shadow-md transition-colors">
+        <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+      </div>
+
+      <button (click)="abrirModalCrear()" class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg hover:from-blue-500 hover:to-blue-400 transition-all shrink-0">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+        Nueva Categoría
+      </button>
+    </div>
+  </div>
+
+  <!-- STATS BAR -->
+  <div class="flex items-center gap-4 border-b border-slate-800 pb-4">
+    <div class="flex items-center gap-2">
+      <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+      <span class="text-xs font-bold uppercase tracking-wider text-slate-400">{{ totalActivas() }} Categorías Activas en la App</span>
+    </div>
+  </div>
+
+  <!-- GRID DE TARJETAS (BENTO BOX STYLE) -->
+  @if (cargando()) {
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <div class="h-32 rounded-3xl bg-slate-800/50 animate-pulse border border-slate-700/30"></div>
+      }
+    </div>
+  } @else if (categoriasFiltradas().length === 0) {
+    <div class="flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed border-slate-800 rounded-3xl bg-slate-900/30">
+      <svg class="w-16 h-16 text-slate-700 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+      <h3 class="text-lg font-bold text-slate-300">No hay categorías</h3>
+      <p class="text-sm text-slate-500 mt-1 text-center">Crea la primera categoría para que los aliados puedan registrarse.</p>
+    </div>
+  } @else {
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+      @for (cat of categoriasFiltradas(); track cat.id) {
+        <div class="group relative bg-slate-900/60 border rounded-3xl p-5 flex flex-col gap-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden"
+             [ngClass]="cat.activo ? 'border-slate-700/80 hover:border-blue-500/50 hover:bg-slate-800' : 'border-slate-800 opacity-60 grayscale'">
+          
+          <!-- Decoración lateral -->
+          <div class="absolute left-0 top-0 bottom-0 w-1.5 transition-colors" [ngClass]="cat.activo ? 'bg-blue-500' : 'bg-slate-700'"></div>
+
+          <!-- Header Card -->
+          <div class="flex justify-between items-start pl-2">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-inner border border-slate-700/50 bg-slate-950/80">
+                {{ cat.icono || '🏷️' }}
+              </div>
+              <div class="flex flex-col">
+                <h3 class="font-bold text-white text-base leading-tight">{{ cat.nombre }}</h3>
+                <span class="text-[10px] uppercase font-bold tracking-widest mt-1" [ngClass]="cat.activo ? 'text-emerald-400' : 'text-slate-500'">
+                  {{ cat.activo ? 'Operativa' : 'Pausada' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <p class="text-xs text-slate-400 pl-2 line-clamp-2 h-8">{{ cat.descripcion || 'Sin descripción detallada.' }}</p>
+
+          <!-- Acciones Card -->
+          <div class="flex items-center justify-between pt-4 border-t border-slate-800/80 pl-2">
+            
+            <button (click)="toggleEstadoFila(cat)" class="text-[11px] font-bold tracking-wider px-3 py-1.5 rounded-lg border transition-colors"
+                    [ngClass]="cat.activo ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'">
+              {{ cat.activo ? 'Pausar' : 'Activar' }}
+            </button>
+
+            <div class="flex gap-1">
+              <button (click)="abrirModalEditar(cat)" title="Editar" class="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-xl transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+              </button>
+              <button (click)="eliminarCategoria(cat)" title="Eliminar" class="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+</div>
+<!-- FIN DEL CONTENEDOR PRINCIPAL -->
+
+
+<!-- MODAL DE CREACIÓN / EDICIÓN VIVIENDO FUERA DEL CONTENEDOR -->
+@if (modalAbierto()) {
+  <div class="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-slate-950/90 backdrop-blur-sm animate-entrance-fixed">
+    
+    <div class="w-full max-w-md max-h-[95vh] bg-slate-900 border border-slate-800 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/60 shrink-0">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+          {{ editandoId() ? 'Editar Categoría' : 'Nueva Categoría' }}
+        </h3>
+        <button (click)="cerrarModal()" class="text-slate-400 hover:text-white bg-slate-800 hover:bg-rose-500 p-1.5 rounded-lg transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      
+      <!-- Modal Body -->
+      <div class="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
+        
+        <!-- Controles de Configuración -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Activo Toggle -->
+          <div class="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Visibilidad</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" [(ngModel)]="nuevaCategoria().activo" class="sr-only peer">
+              <div class="w-10 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+            </label>
+          </div>
+
+          <!-- Requiere Despacho Toggle -->
+          <div class="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Logística (Moto)</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" [(ngModel)]="nuevaCategoria().requiere_despacho" class="sr-only peer">
+              <div class="w-10 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Nombre -->
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Nombre Comercial <span class="text-rose-500">*</span></label>
+          <input type="text" [(ngModel)]="nuevaCategoria().nombre" placeholder="Ej: Restaurantes, Farmacia..." class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:outline-none focus:border-blue-500 shadow-inner transition-colors">
+        </div>
+
+        <!-- Selector de Icono / Emoji -->
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Icono / Emoji Representativo <span class="text-rose-500">*</span></label>
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-700 shadow-inner flex flex-col gap-3">
+            <div class="flex items-center gap-4 border-b border-slate-800 pb-3">
+              <div class="w-12 h-12 rounded-xl border-2 border-dashed border-blue-500/50 bg-blue-500/10 flex items-center justify-center text-2xl shrink-0">
+                {{ nuevaCategoria().icono || '❓' }}
+              </div>
+              <input type="text" [(ngModel)]="nuevaCategoria().icono" placeholder="Pega un emoji o texto corto" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-500 mb-2 block font-medium">Sugerencias rápidas:</span>
+              <div class="flex flex-wrap gap-2">
+                @for (ico of iconosDisponibles; track ico) {
+                  <button (click)="seleccionarIcono(ico)" class="w-8 h-8 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 hover:border-slate-500 flex items-center justify-center transition-colors text-sm" [ngClass]="nuevaCategoria().icono === ico ? 'border-blue-500 bg-blue-500/20' : ''">
+                    {{ ico }}
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Descripción -->
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Descripción (Opcional)</label>
+          <textarea [(ngModel)]="nuevaCategoria().descripcion" rows="3" placeholder="Breve detalle de la categoría..." class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:outline-none focus:border-blue-500 shadow-inner transition-colors resize-none"></textarea>
+        </div>
+
+      </div>
+      
+      <!-- Modal Footer -->
+      <div class="px-6 py-4 border-t border-slate-800 bg-slate-950/60 flex justify-end gap-3 shrink-0">
+        <button (click)="cerrarModal()" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white transition-colors">Cancelar</button>
+        <button (click)="guardarCategoria()" [disabled]="!formularioValido()" class="px-8 py-2.5 rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+          {{ editandoId() ? 'Guardar Cambios' : 'Crear Categoría' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
