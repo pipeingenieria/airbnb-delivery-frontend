@@ -9,7 +9,7 @@ import { AliadosList } from './admin/features/aliados/aliados-list/aliados-list'
 import { AliadoForm } from './admin/features/aliados/aliado-form/aliado-form';
 
 export const routes: Routes = [
-  // La Web App del Huésped en la raíz, totalmente aislada y funcional
+  // Si alguien entra sin token (Ej: a la raíz pura)
   { path: '', component: ClientHome },
 
   // El Módulo Super Admin estructurado bajo /admin
@@ -26,10 +26,19 @@ export const routes: Routes = [
     ]
   },
 
+  // Portal de Gestión para los Aliados Comerciales
   { 
     path: 'partner/:token', 
     component: AliadoForm 
   },
 
+  // LA RUTA DEL HUÉSPED (Be-Nest IQ)
+  // Captura cualquier enlace tipo misitio.com/qr-prop-101
+  { 
+    path: ':token', 
+    component: ClientHome 
+  },
+
+  // Redirección por defecto para URLs inválidas
   { path: '**', redirectTo: '' }
 ];
