@@ -35,7 +35,6 @@ export class AliadoForm implements OnInit {
   aliadoInfo = signal<any>(null);
   catalogo = signal<CatalogoItem[]>([]);
 
-  // Modales
   modalAbierto = signal<boolean>(false);
   modalSeccionesAbierto = signal<boolean>(false);
   
@@ -44,14 +43,13 @@ export class AliadoForm implements OnInit {
   imagenPreview = signal<string | null>(null);
   precioVisual = signal<string>('');
 
-  // Gestor de Secciones
-  seccionesManuales = signal<string[]>(['Menú Principal']);
+  seccionesManuales = signal<string[]>([]);
   nuevaSeccionInput = signal<string>('');
   seccionEditando = signal<string | null>(null);
   seccionEditandoInput = signal<string>('');
 
   nuevoProducto = signal<CatalogoItem>({
-    seccion: 'Menú Principal',
+    seccion: '',
     nombre: '',
     descripcion: '',
     precio_base: 0,
@@ -59,7 +57,17 @@ export class AliadoForm implements OnInit {
     disponible: true
   });
 
-  // AGRUPACIÓN MAGICA PARA LA VISTA PREVIA DE LA CARTA Y LA UI
+  // ==============================================
+  // LÓGICA DE CONTEXTO INTELIGENTE (Restaurante vs General)
+  // ==============================================
+  esRestaurante = computed(() => {
+    const cat = this.aliadoInfo()?.categoria || '';
+    // Detecta si es un restaurante o similar
+    return cat.toLowerCase().includes('restaurant') || cat.toLowerCase().includes('comida');
+  });
+
+  seccionPorDefecto = computed(() => this.esRestaurante() ? 'Menú Principal' : 'Catálogo General');
+
   seccionesDisponibles = computed(() => {
     const secItems = this.catalogo().map(i => i.seccion);
     return Array.from(new Set([...this.seccionesManuales(), ...secItems]));
@@ -67,12 +75,10 @@ export class AliadoForm implements OnInit {
 
   menuAgrupado = computed(() => {
     const grupos = new Map<string, CatalogoItem[]>();
-    // Inicializamos todas las secciones disponibles (incluso las vacías)
     this.seccionesDisponibles().forEach(sec => grupos.set(sec, []));
     
-    // Llenamos con los productos reales
     this.catalogo().forEach(item => {
-      const sec = item.seccion || 'Menú Principal';
+      const sec = item.seccion || this.seccionPorDefecto();
       if (!grupos.has(sec)) grupos.set(sec, []);
       grupos.get(sec)!.push(item);
     });
@@ -114,9 +120,8 @@ export class AliadoForm implements OnInit {
       next: (res) => {
         this.aliadoInfo.set(res.aliado);
         this.catalogo.set(res.catalogo);
-        // Extraemos las secciones que ya traiga de BD
         const secItems = res.catalogo.map((i: any) => i.seccion);
-        this.seccionesManuales.set(Array.from(new Set(['Menú Principal', ...secItems])));
+        this.seccionesManuales.set(Array.from(new Set([this.seccionPorDefecto(), ...secItems])));
         this.cargando.set(false);
       },
       error: () => {
@@ -126,7 +131,6 @@ export class AliadoForm implements OnInit {
     });
   }
 
-  // --- GESTOR DE SECCIONES ---
   abrirModalSecciones() {
     this.modalSeccionesAbierto.set(true);
     this.nuevaSeccionInput.set('');
@@ -156,10 +160,8 @@ export class AliadoForm implements OnInit {
       this.seccionesManuales.update(list => list.map(s => s === oldSec ? newSec : s));
       const productosAActualizar = this.catalogo().filter(p => p.seccion === oldSec);
       
-      // Actualización Optimista en UI
       this.catalogo.update(list => list.map(p => p.seccion === oldSec ? { ...p, seccion: newSec } : p));
       
-      // Enviar cambios silenciosos a la BD
       productosAActualizar.forEach(p => {
          this.adminService.updateCatalogoItem(this.currentToken, p.id!, { seccion: newSec }).subscribe();
       });
@@ -169,16 +171,12 @@ export class AliadoForm implements OnInit {
 
   eliminarSeccion(sec: string) {
     const productosEnSeccion = this.catalogo().filter(p => p.seccion === sec);
-    
-    // 1. Construir el mensaje dependiendo de si hay productos o está vacía
     const mensaje = productosEnSeccion.length > 0 
-      ? `⚠️ ATENCIÓN: Hay ${productosEnSeccion.length} producto(s) en la sección "${sec}".\n\n¿Estás seguro de eliminar la sección y TODOS sus productos permanentemente?`
-      : `⚠️ ¿Estás seguro de eliminar la sección "${sec}"?`;
+      ? `⚠️ ATENCIÓN: Hay ${productosEnSeccion.length} producto(s) en la categoría "${sec}".\n\n¿Estás seguro de eliminar la categoría y TODOS sus productos permanentemente?`
+      : `⚠️ ¿Estás seguro de eliminar la categoría "${sec}"?`;
 
-    // 2. SIEMPRE preguntar antes de proceder
     if (!confirm(mensaje)) return;
 
-    // 3. Si hay productos, los eliminamos de la BD y de la vista
     if (productosEnSeccion.length > 0) {
       productosEnSeccion.forEach(p => {
          this.adminService.deleteCatalogoItem(this.currentToken, p.id!).subscribe();
@@ -186,17 +184,15 @@ export class AliadoForm implements OnInit {
       this.catalogo.update(list => list.filter(p => p.seccion !== sec));
     }
     
-    // 4. Finalmente, eliminamos la sección de la lista manual
     this.seccionesManuales.update(list => list.filter(s => s !== sec));
-    this.showToast(`🗑️ Sección "${sec}" eliminada`);
+    this.showToast(`🗑️ Categoría "${sec}" eliminada`);
   }
 
-  // --- GESTOR DE PRODUCTOS ---
   abrirModalCrear(seccionPredefinida?: string) {
     this.editandoId.set(null);
     this.imagenPreview.set(null);
     this.precioVisual.set('');
-    this.nuevoProducto.set({ seccion: seccionPredefinida || 'Menú Principal', nombre: '', descripcion: '', precio_base: 0, imagen_url: '', disponible: true });
+    this.nuevoProducto.set({ seccion: seccionPredefinida || this.seccionPorDefecto(), nombre: '', descripcion: '', precio_base: 0, imagen_url: '', disponible: true });
     this.modalAbierto.set(true);
   }
 
@@ -210,7 +206,6 @@ export class AliadoForm implements OnInit {
 
   cerrarModal() { this.modalAbierto.set(false); }
 
-  // FIX MÁGICO: Esta función fuerza a Angular Signals a notar el cambio
   actualizarCampo(campo: keyof CatalogoItem, valor: any) {
     this.nuevoProducto.update(p => ({ ...p, [campo]: valor }));
   }
@@ -239,7 +234,7 @@ export class AliadoForm implements OnInit {
     this.adminService.updateCatalogoItem(this.currentToken, producto.id!, { disponible: status }).subscribe({
       next: () => {
         this.catalogo.update(list => list.map(p => p.id === producto.id ? { ...p, disponible: status } : p));
-        this.showToast(status ? `✅ ${producto.nombre} visible en la carta` : `👁️‍🗨️ ${producto.nombre} oculto`);
+        this.showToast(status ? `✅ ${producto.nombre} visible en ${this.esRestaurante() ? 'la carta' : 'el catálogo'}` : `👁️‍🗨️ ${producto.nombre} oculto`);
       }
     });
   }
@@ -252,7 +247,7 @@ export class AliadoForm implements OnInit {
       this.adminService.updateCatalogoItem(this.currentToken, this.editandoId()!, p).subscribe({
         next: (res) => {
           this.catalogo.update(list => list.map(item => item.id === this.editandoId() ? res : item));
-          this.showToast('✅ Plato actualizado en la carta');
+          this.showToast(`✅ ${this.esRestaurante() ? 'Plato actualizado en la carta' : 'Producto actualizado en el catálogo'}`);
           this.cerrarModal();
         }
       });
@@ -260,7 +255,7 @@ export class AliadoForm implements OnInit {
       this.adminService.createCatalogoItem(this.currentToken, p).subscribe({
         next: (res) => {
           this.catalogo.update(list => [...list, res]);
-          this.showToast('🎉 Añadido a la carta exitosamente');
+          this.showToast(`🎉 Añadido ${this.esRestaurante() ? 'a la carta' : 'al catálogo'} exitosamente`);
           this.cerrarModal();
         }
       });
@@ -269,11 +264,12 @@ export class AliadoForm implements OnInit {
 
   eliminarProducto(id: number, event: Event) {
     event.stopPropagation();
-    if (confirm('⚠️ ¿Retirar este producto del menú permanentemente?')) {
+    const mensaje = `⚠️ ¿Retirar este ${this.esRestaurante() ? 'plato del menú' : 'producto del catálogo'} permanentemente?`;
+    if (confirm(mensaje)) {
       this.adminService.deleteCatalogoItem(this.currentToken, id).subscribe({
         next: () => {
           this.catalogo.update(list => list.filter(p => p.id !== id));
-          this.showToast('🗑️ Retirado de la carta');
+          this.showToast(`🗑️ Retirado ${this.esRestaurante() ? 'de la carta' : 'del catálogo'}`);
         }
       });
     }
