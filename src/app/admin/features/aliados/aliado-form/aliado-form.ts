@@ -169,14 +169,24 @@ export class AliadoForm implements OnInit {
 
   eliminarSeccion(sec: string) {
     const productosEnSeccion = this.catalogo().filter(p => p.seccion === sec);
+    
+    // 1. Construir el mensaje dependiendo de si hay productos o está vacía
+    const mensaje = productosEnSeccion.length > 0 
+      ? `⚠️ ATENCIÓN: Hay ${productosEnSeccion.length} producto(s) en la sección "${sec}".\n\n¿Estás seguro de eliminar la sección y TODOS sus productos permanentemente?`
+      : `⚠️ ¿Estás seguro de eliminar la sección "${sec}"?`;
+
+    // 2. SIEMPRE preguntar antes de proceder
+    if (!confirm(mensaje)) return;
+
+    // 3. Si hay productos, los eliminamos de la BD y de la vista
     if (productosEnSeccion.length > 0) {
-      if (!confirm(`⚠️ Hay ${productosEnSeccion.length} productos en "${sec}". ¿Deseas eliminar la sección y TODOS sus productos?`)) return;
-      
       productosEnSeccion.forEach(p => {
          this.adminService.deleteCatalogoItem(this.currentToken, p.id!).subscribe();
       });
       this.catalogo.update(list => list.filter(p => p.seccion !== sec));
     }
+    
+    // 4. Finalmente, eliminamos la sección de la lista manual
     this.seccionesManuales.update(list => list.filter(s => s !== sec));
     this.showToast(`🗑️ Sección "${sec}" eliminada`);
   }
