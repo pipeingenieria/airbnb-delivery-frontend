@@ -16,9 +16,17 @@ export interface Zona {
 export interface Aliado {
   id?: number;
   nombre: string;
-  categoria_id: number;
-  zona_id: number;
+  direccion?: string;
+  latitud?: number;
+  longitud?: number;
+  categoria_id: number | null;
+  zona_id: number | null;
   estado_operativo: string;
+  qr_access_token?: string;
+  correo_contacto?: string;
+  nombre_contacto?: string; // <-- AÑADIR
+  telefono_contacto?: string;
+  logo_url?: string;
 }
 
 export interface Zona {

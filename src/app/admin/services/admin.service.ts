@@ -84,9 +84,17 @@ export class AdminService {
   createAliado(aliado: Aliado): Observable<Aliado> {
     return this.http.post<Aliado>(`${this.apiUrl}/aliados`, aliado);
   }
-
+  updateAliado(id: number, aliado: Partial<Aliado>): Observable<Aliado> {
+    return this.http.put<Aliado>(`${this.apiUrl}/aliados/${id}`, aliado);
+  }
+  deleteAliado(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/aliados/${id}`);
+  }
   notificarAirbnb(id: number) {
     return this.http.post(`${this.apiUrl}/propiedades/${id}/notificar-airbnb`, {});
+  }
+  notificarAliado(id: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/aliados/${id}/notificar`, {});
   }
 
   // ==========================================
