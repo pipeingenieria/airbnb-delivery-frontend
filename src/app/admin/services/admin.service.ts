@@ -109,4 +109,20 @@ export class AdminService {
   deleteImagen(url: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/upload-imagen/delete`, { url });
   }
+
+  // ==========================================
+  // PORTAL ALIADOS (Partner)
+  // ==========================================
+  getPortalAliado(token: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/partner/${token}`);
+  }
+  createCatalogoItem(token: string, item: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/partner/${token}/catalogo`, item);
+  }
+  updateCatalogoItem(token: string, id: number, item: any): Observable<any> {
+    return this.http.put(`${this.apiUrl}/partner/${token}/catalogo/${id}`, item);
+  }
+  deleteCatalogoItem(token: string, id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/partner/${token}/catalogo/${id}`);
+  }
 }

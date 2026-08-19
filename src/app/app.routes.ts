@@ -6,6 +6,7 @@ import { ZonasList } from './admin/features/zonas/zonas-list/zonas-list';
 import { CategoriasList } from './admin/features/categorias/categorias-list/categorias-list';
 import { PropiedadesList } from './admin/features/propiedades/propiedades-list/propiedades-list';
 import { AliadosList } from './admin/features/aliados/aliados-list/aliados-list';
+import { AliadoForm } from './admin/features/aliados/aliado-form/aliado-form';
 
 export const routes: Routes = [
   // La Web App del Huésped en la raíz, totalmente aislada y funcional
@@ -23,6 +24,11 @@ export const routes: Routes = [
       { path: 'propiedades', component: PropiedadesList },
       { path: 'aliados', component: AliadosList }
     ]
+  },
+
+  { 
+    path: 'partner/:token', 
+    component: AliadoForm 
   },
 
   { path: '**', redirectTo: '' }
