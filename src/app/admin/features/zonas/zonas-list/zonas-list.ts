@@ -30,6 +30,10 @@ export class ZonasList implements OnInit, AfterViewInit {
     radio: 1000 
   });
 
+  // NUEVAS SEÑALES PARA PUNTOS DE INTERÉS
+  propiedadesBD = signal<any[]>([]);
+  aliadosBD = signal<any[]>([]);
+
   // ESTADO PARA FILTRO Y PAGINACIÓN
   filtroLista = signal<string>('');
   paginaActual = signal<number>(1);
@@ -54,8 +58,10 @@ export class ZonasList implements OnInit, AfterViewInit {
     return this.zonasFiltradas().slice(inicio, fin);
   });
 
+  // MAPAS Y CAPAS
   private map!: L.Map;
-  private markersLayer = L.layerGroup();
+  private markersLayer = L.layerGroup(); 
+  private detallesLayer = L.layerGroup(); 
   
   private miniMap: L.Map | null = null;
   private miniMapMarker: L.Marker | null = null;
@@ -63,6 +69,7 @@ export class ZonasList implements OnInit, AfterViewInit {
 
   ngOnInit() {
     this.cargarZonas();
+    this.cargarElementosMapa(); 
   }
 
   ngAfterViewInit() {
@@ -82,7 +89,6 @@ export class ZonasList implements OnInit, AfterViewInit {
     
     L.control.zoom({ position: 'bottomright' }).addTo(this.map);
 
-    // MAPA PRINCIPAL: OpenStreetMap Standard (Máximo contraste)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap',
       maxZoom: 19,
@@ -93,6 +99,20 @@ export class ZonasList implements OnInit, AfterViewInit {
 
     this.markersLayer.addTo(this.map);
 
+    // EVENTO DE ZOOM: Ajustado a 12.5 para que los iconos aparezcan desde más lejos
+    this.map.on('zoomend', () => {
+      const zoomActual = this.map.getZoom();
+      if (zoomActual >= 12.5) { 
+        if (!this.map.hasLayer(this.detallesLayer)) {
+          this.map.addLayer(this.detallesLayer);
+        }
+      } else {
+        if (this.map.hasLayer(this.detallesLayer)) {
+          this.map.removeLayer(this.detallesLayer);
+        }
+      }
+    });
+
     this.map.on('click', (e: L.LeafletMouseEvent) => {
       this.abrirModalCrear(e.latlng.lat, e.latlng.lng);
     });
@@ -101,6 +121,68 @@ export class ZonasList implements OnInit, AfterViewInit {
       this.map.invalidateSize();
       this.actualizarMarcadoresEnMapa(); 
     }, 200);
+  }
+
+  cargarElementosMapa() {
+    this.adminService.getPropiedades().subscribe({
+      next: (data) => { this.propiedadesBD.set(data); this.actualizarDetallesMapa(); },
+      error: () => console.error("No se pudieron cargar las propiedades")
+    });
+
+    this.adminService.getAliados().subscribe({
+      next: (data) => { this.aliadosBD.set(data); this.actualizarDetallesMapa(); },
+      error: () => console.error("No se pudieron cargar los aliados")
+    });
+  }
+
+  actualizarDetallesMapa() {
+    this.detallesLayer.clearLayers();
+
+    const iconoPropiedad = L.divIcon({
+      className: 'bg-transparent border-0',
+      html: `<div style="width: 28px; height: 28px; background: #6366f1; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); color: white;">
+               <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+             </div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14],
+      popupAnchor: [0, -14]
+    });
+
+    const iconoAliado = L.divIcon({
+      className: 'bg-transparent border-0',
+      html: `<div style="width: 28px; height: 28px; background: #f43f5e; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); color: white;">
+               <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+             </div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14],
+      popupAnchor: [0, -14]
+    });
+
+    this.propiedadesBD().forEach(prop => {
+      if (prop.latitud && prop.longitud) {
+        const marker = L.marker([prop.latitud, prop.longitud], { icon: iconoPropiedad });
+        marker.bindPopup(`
+          <div style="font-family: sans-serif; text-align: center; min-width: 120px;">
+            <strong style="color: #0f172a; font-size: 13px;">${prop.nombre}</strong><br>
+            <span style="color: #6366f1; font-size: 11px; font-weight: bold;">🏢 Propiedad Be-Nest</span>
+          </div>
+        `);
+        this.detallesLayer.addLayer(marker);
+      }
+    });
+
+    this.aliadosBD().forEach(aliado => {
+      if (aliado.latitud && aliado.longitud) {
+        const marker = L.marker([aliado.latitud, aliado.longitud], { icon: iconoAliado });
+        marker.bindPopup(`
+          <div style="font-family: sans-serif; text-align: center; min-width: 120px;">
+            <strong style="color: #0f172a; font-size: 13px;">${aliado.nombre}</strong><br>
+            <span style="color: #f43f5e; font-size: 11px; font-weight: bold;">🏪 Socio Comercial</span>
+          </div>
+        `);
+        this.detallesLayer.addLayer(marker);
+      }
+    });
   }
 
   actualizarMarcadoresEnMapa() {
@@ -115,28 +197,23 @@ export class ZonasList implements OnInit, AfterViewInit {
         const radio = Number(zona.radio) || 1000;
 
         const circle = L.circle([lat, lng], {
-          color: '#f43f5e',
-          fillColor: '#f43f5e',
-          fillOpacity: 0.2,
+          color: '#10b981', 
+          fillOpacity: 0.45, // <-- CÁMBIALO A 0.35 (o 0.4 si lo quieres más fuerte)
+          weight: 4,
           radius: radio
         });
 
-        // 1. Evitar que un clic simple en la zona abra el modal de "Crear Nueva"
-        circle.on('click', (e: any) => {
-          L.DomEvent.stopPropagation(e);
-        });
-
-        // 2. Doble clic para abrir el modal de edición directamente
+        circle.on('click', (e: any) => { L.DomEvent.stopPropagation(e); });
         circle.on('dblclick', (e: any) => {
           L.DomEvent.stopPropagation(e);
-          this.editarZona(zona); // Llamamos a editar sin enviar el event HTML
+          this.editarZona(zona); 
         });
 
         circle.bindPopup(`
           <div style="font-family: sans-serif; text-align: center;">
             <strong style="color: #0f172a; font-size: 14px;">${zona.nombre}</strong><br>
             <span style="color: #64748b; font-size: 12px;">Cobertura: ${radio}m</span><br>
-            <span style="color: #f43f5e; font-size: 10px; font-weight: bold; margin-top: 4px; display: block;">(Doble clic para editar)</span>
+            <span style="color: #10b981; font-size: 10px; font-weight: bold; margin-top: 4px; display: block;">(Doble clic para editar)</span>
           </div>
         `);
         
@@ -182,7 +259,7 @@ export class ZonasList implements OnInit, AfterViewInit {
     const lng = Number(zona.longitud);
     
     if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-      this.map.flyTo([lat, lng], 15, { duration: 1.5 });
+      this.map.flyTo([lat, lng], 16, { duration: 1.5 });
     } else {
       alert(`La zona "${zona.nombre}" no tiene coordenadas asignadas en la Base de Datos. Por favor, dale clic a Editar (el lápiz) y ubícala en el mapa.`);
     }
@@ -254,10 +331,8 @@ export class ZonasList implements OnInit, AfterViewInit {
         const lat = parseFloat(data[0].lat);
         const lng = parseFloat(data[0].lon);
         
-        // Actualizamos las coordenadas
         this.nuevaZona.update(z => ({ ...z, latitud: lat, longitud: lng }));
         
-        // Movemos el mini-mapa, el pin y la geocerca a la nueva ubicación
         if (this.miniMap) this.miniMap.flyTo([lat, lng], 15, { duration: 1 });
         if (this.miniMapMarker) this.miniMapMarker.setLatLng([lat, lng]);
         if (this.miniMapCircle) this.miniMapCircle.setLatLng([lat, lng]);
@@ -325,7 +400,6 @@ export class ZonasList implements OnInit, AfterViewInit {
     
     L.control.zoom({ position: 'bottomright' }).addTo(this.miniMap);
     
-    // MINIMAPA: OpenStreetMap Standard (Máximo contraste)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap',
       maxZoom: 19,
@@ -345,7 +419,8 @@ export class ZonasList implements OnInit, AfterViewInit {
     this.miniMapCircle = L.circle([lat, lng], {
       color: '#10b981',
       fillColor: '#10b981',
-      fillOpacity: 0.2,
+      fillOpacity: 0.35, // <-- CÁMBIALO A 0.35
+      weight: 4,
       radius: this.nuevaZona().radio
     }).addTo(this.miniMap);
 
