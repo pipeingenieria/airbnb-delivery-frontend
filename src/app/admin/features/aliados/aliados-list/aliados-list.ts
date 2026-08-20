@@ -20,13 +20,17 @@ export class AliadosList implements OnInit, AfterViewInit {
   modalAbierto = signal<boolean>(false);
   editandoId = signal<number | null>(null);
   toastMessage = signal<string | null>(null);
+  
+  // SEÑALES DE FILTRADO
   filtroTexto = signal<string>('');
+  filtroEstado = signal<'todos' | 'activos' | 'inactivos' | 'falta_contacto'>('todos');
+  
   imagenPreview = signal<string | null>(null);
   busquedaDireccion = signal<string>('');
 
   showCelebration = signal<boolean>(false);
 
-  // --- NUEVOS ESTADOS PARA MODAL DE CONTACTO ---
+  // ESTADOS PARA MODAL DE CONTACTO
   modalContactoAbierto = signal<boolean>(false);
   aliadoEnContacto = signal<Aliado | null>(null);
   contactoEdicionDirecta = signal<Aliado | null>(null);
@@ -45,17 +49,31 @@ export class AliadosList implements OnInit, AfterViewInit {
     longitud: -75.5579,
     categoria_id: null,
     zona_id: null,
-    estado_operativo: 'Cerrado', // Nace cerrado por defecto hasta tener contacto
+    estado_operativo: 'Cerrado', 
     correo_contacto: '',
-    nombre_contacto: '', // <-- AÑADIR
+    nombre_contacto: '', 
     telefono_contacto: '',
     logo_url: ''
   });
 
+  // FILTRO COMBINADO: Texto + Estado
   aliadosFiltrados = computed(() => {
     const term = this.filtroTexto().toLowerCase().trim();
-    if (!term) return this.aliados();
-    return this.aliados().filter(a => 
+    const estado = this.filtroEstado();
+    
+    let filtrados = this.aliados();
+
+    if (estado === 'activos') {
+      filtrados = filtrados.filter(a => a.estado_operativo === 'Abierto');
+    } else if (estado === 'inactivos') {
+      filtrados = filtrados.filter(a => a.estado_operativo !== 'Abierto');
+    } else if (estado === 'falta_contacto') {
+      filtrados = filtrados.filter(a => !a.correo_contacto || !a.telefono_contacto);
+    }
+
+    if (!term) return filtrados;
+    
+    return filtrados.filter(a => 
       a.nombre.toLowerCase().includes(term) || 
       (a.correo_contacto && a.correo_contacto.toLowerCase().includes(term))
     );
@@ -73,7 +91,7 @@ export class AliadosList implements OnInit, AfterViewInit {
     return a.nombre.trim().length > 2 && a.categoria_id !== null && a.zona_id !== null && this.esDireccionValida();
   });
 
-  // --- MAPAS LEAFLET ---
+  // MAPAS LEAFLET
   private map!: L.Map;
   private markersLayer = L.layerGroup();
   private propsLayer = L.layerGroup();
@@ -110,7 +128,6 @@ export class AliadosList implements OnInit, AfterViewInit {
     });
   }
 
-  // --- LÓGICA MAPA PRINCIPAL ---
   initMainMap() {
     if (this.map) this.map.remove();
     this.map = L.map('aliados-map', { zoomControl: false, preferCanvas: true }).setView([6.3373, -75.5579], 13);
@@ -118,8 +135,17 @@ export class AliadosList implements OnInit, AfterViewInit {
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(this.map);
     
     this.mainZonasLayer.addTo(this.map);
-    this.propsLayer.addTo(this.map);
     this.markersLayer.addTo(this.map);
+
+    // MAGIA ESPACIAL DE ZOOM PARA PROPIEDADES (Fondo)
+    this.map.on('zoomend', () => {
+      const zoomActual = this.map.getZoom();
+      if (zoomActual >= 12.5) {
+        if (!this.map.hasLayer(this.propsLayer)) this.map.addLayer(this.propsLayer);
+      } else {
+        if (this.map.hasLayer(this.propsLayer)) this.map.removeLayer(this.propsLayer);
+      }
+    });
 
     this.map.on('dblclick', (e: L.LeafletMouseEvent) => {
       L.DomEvent.stopPropagation(e);
@@ -135,40 +161,122 @@ export class AliadosList implements OnInit, AfterViewInit {
     this.mainZonasLayer.clearLayers();
     this.propsLayer.clearLayers();
 
+    // 1. Capa Verde: Zonas de Cobertura
     this.zonas().forEach(zona => {
       if (zona.latitud && zona.longitud && zona.radio) {
-        L.circle([Number(zona.latitud), Number(zona.longitud)], { color: '#10b981', weight: 2, fillColor: '#10b981', fillOpacity: 0.1, radius: Number(zona.radio), interactive: false }).addTo(this.mainZonasLayer);
+        L.circle([Number(zona.latitud), Number(zona.longitud)], { 
+          color: '#10b981', weight: 2, fillColor: '#10b981', fillOpacity: 0.1, radius: Number(zona.radio), interactive: false 
+        }).addTo(this.mainZonasLayer);
       }
     });
 
+    // 2. Capa Discreta (Secundaria): Propiedades y Edificios
+    const mapProps = new Map<string, Propiedad[]>();
     this.propiedades().forEach(p => {
       if (p.latitud && p.longitud) {
-        L.circleMarker([Number(p.latitud), Number(p.longitud)], { radius: 3, color: '#475569', fillColor: '#64748b', fillOpacity: 0.5, weight: 1, interactive: false }).addTo(this.propsLayer);
+        const key = `${Number(p.latitud).toFixed(5)},${Number(p.longitud).toFixed(5)}`;
+        if (!mapProps.has(key)) mapProps.set(key, []);
+        mapProps.get(key)!.push(p);
       }
     });
 
+    mapProps.forEach((props) => {
+      const esEdificio = props.length > 1 || props.some(p => p.nombre.includes(' - Apto '));
+      const pPrincipal = props.find(p => p.nombre.includes(' - Apto ')) || props[0];
+      const nombreBase = esEdificio ? pPrincipal.nombre.split(' - Apto ')[0] : pPrincipal.nombre;
+      const activo = props.some(p => p.activo);
+      
+      const lat = pPrincipal.latitud;
+      const lng = pPrincipal.longitud;
+      
+      if(!lat || !lng) return;
+
+      const colorPin = activo ? '#93c5fd' : '#cbd5e1'; 
+      const colorEdificio = activo ? '#c4b5fd' : '#cbd5e1'; 
+      const shadowStyle = 'box-shadow: 0 2px 4px rgba(0,0,0,0.3);';
+
+      // Íconos de propiedades: Se subió la opacidad a 1 (100% sólidos)
+      const propIcon = L.divIcon({ 
+          className: 'bg-transparent border-0', 
+          html: `<div style="background-color: ${colorPin}; width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.9); ${shadowStyle} display:flex; align-items:center; justify-content:center; color:white; opacity: 1;"> <svg style="width:12px; height:12px;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                 </div>`, 
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+      });
+
+      const edificioIcon = L.divIcon({ 
+          className: 'bg-transparent border-0', 
+          html: `<div style="background-color: ${colorEdificio}; width: 24px; height: 24px; border-radius: 6px; border: 1.5px solid rgba(255,255,255,0.9); ${shadowStyle} display:flex; align-items:center; justify-content:center; color:white; opacity: 1;"> <svg style="width:14px; height:14px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                 </div>`, 
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+      });
+
+      const marker = L.marker([Number(lat), Number(lng)], { icon: esEdificio ? edificioIcon : propIcon });
+      
+      const tipo = esEdificio ? 'Edificio Múltiple' : 'Propiedad Única';
+      const cantidadInfo = esEdificio ? `<br><span style="font-size:9px; color:#64748b;">${props.length} Apartamentos</span>` : '';
+      
+      marker.bindPopup(`
+        <div style="font-family: sans-serif; text-align: center; min-width: 100px; padding: 2px;">
+          <strong style="color: #0f172a; font-size: 11px;">${nombreBase}</strong><br>
+          <span style="color: ${activo ? '#3b82f6' : '#64748b'}; font-size: 9px; font-weight: bold; text-transform: uppercase;">${tipo}</span>
+          ${cantidadInfo}
+        </div>
+      `);
+      
+      this.propsLayer.addLayer(marker);
+    });
+
+    if (this.map.getZoom() >= 12.5) {
+      this.map.addLayer(this.propsLayer);
+    } else {
+      this.map.removeLayer(this.propsLayer);
+    }
+
+    // 3. Capa Protagonista (Principal): Aliados (Con LOGO restaurado)
     this.aliados().forEach(aliado => {
       if (aliado.latitud && aliado.longitud) {
         const colorPin = aliado.estado_operativo === 'Abierto' ? '#f43f5e' : '#64748b'; 
+        const borderPin = aliado.estado_operativo === 'Abierto' ? 'border: 2px solid white;' : 'border: 2px dashed #94a3b8; opacity: 0.9;';
+        const shadowPin = aliado.estado_operativo === 'Abierto' ? 'box-shadow: 0 4px 10px rgba(244,63,94,0.5);' : 'box-shadow: 0 2px 4px rgba(0,0,0,0.3);';
+        
         const iconoInfo = this.getCategoriaInfo(aliado.categoria_id);
-        const innerContent = aliado.logo_url ? `<img src="${aliado.logo_url}" style="width:100%; height:100%; object-fit:cover;">` : `<span style="font-size:16px;">${iconoInfo.icono}</span>`;
+        const emoji = iconoInfo.icono;
+        const nombreCat = iconoInfo.nombre;
 
+        // Si tiene logo, carga la imagen. Si no, usa el emoji con el borde oscuro.
+        const innerContent = aliado.logo_url 
+          ? `<img src="${aliado.logo_url}" style="width:100%; height:100%; object-fit:cover;">` 
+          : `<span style="text-shadow: -1px -1px 0 rgba(15,23,42,0.9), 1px -1px 0 rgba(15,23,42,0.9), -1px 1px 0 rgba(15,23,42,0.9), 1px 1px 0 rgba(15,23,42,0.9);">${emoji}</span>`;
+
+        // overflow: hidden para que la foto no se salga del círculo
         const pinIcon = L.divIcon({ 
-          className: 'custom-aliado-pin', 
-          html: `<div style="background-color: ${colorPin}; width: 36px; height: 36px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 15px ${colorPin}; display:flex; align-items:center; justify-content:center; overflow:hidden;">${innerContent}</div>`, 
-          iconSize: [36, 36], iconAnchor: [18, 18]
+          className: 'bg-transparent border-0',
+          html: `<div style="width: 36px; height: 36px; background: ${colorPin}; border-radius: 50%; display: flex; align-items: center; justify-content: center; ${borderPin} ${shadowPin} color: white; font-size: 18px; line-height: 1; z-index: 1000; overflow: hidden;">
+                   ${innerContent}
+                 </div>`,
+          iconSize: [36, 36],
+          iconAnchor: [18, 18],
+          popupAnchor: [0, -18]
         });
 
         const marker = L.marker([aliado.latitud, aliado.longitud], { icon: pinIcon });
         marker.on('click', (e: any) => L.DomEvent.stopPropagation(e));
-        marker.bindPopup(`<div style="padding:4px;text-align:center;"><b>${aliado.nombre}</b><br><span style="font-size:10px;">${iconoInfo.nombre}</span></div>`);
+        
+        marker.bindPopup(`
+          <div style="font-family: sans-serif; text-align: center; min-width: 120px; padding: 4px;">
+            <strong style="color: #0f172a; font-size: 13px;">${aliado.nombre}</strong><br>
+            <span style="color: ${colorPin}; font-size: 11px; font-weight: bold;">${emoji} ${nombreCat}</span>
+          </div>
+        `);
+        
         marker.on('dblclick', (e: any) => { L.DomEvent.stopPropagation(e); this.abrirModalEditar(aliado); });
         this.markersLayer.addLayer(marker);
       }
     });
   }
 
-  // --- LÓGICA MINI-MAPA ---
   initMiniMap(lat: number, lng: number) {
     if (this.miniMap) this.miniMap.remove();
     this.miniMap = L.map('minimap-aliado', { zoomControl: false, preferCanvas: true }).setView([lat, lng], 14);
@@ -253,8 +361,6 @@ export class AliadosList implements OnInit, AfterViewInit {
     } catch (e) { }
   }
 
-  // --- LÓGICA DEL MODAL DE CONTACTO UNIFICADO (NUEVO) ---
-
   abrirContactoDesdeDirectorio(aliado: Aliado, event: Event) {
     event.stopPropagation();
     event.preventDefault();
@@ -275,6 +381,33 @@ export class AliadosList implements OnInit, AfterViewInit {
     this.contactoEdicionDirecta.set(null);
   }
 
+  abrirPortalDirecto(token: string | undefined, event: Event) {
+    event.stopPropagation();
+    if (token) {
+      window.open(`https://airbnb-delivery-frontend.vercel.app/partner/${token}`, '_blank');
+    } else {
+      this.mostrarToast('⚠️ Este comercio aún no tiene un token válido. Guárdalo para generarlo.');
+    }
+  }
+
+  descargarQRDesdeModal(event: Event) {
+    event.stopPropagation();
+    const aliado = this.aliadoEnContacto();
+    if (!aliado || !aliado.qr_access_token) return;
+    const urlDestino = `https://airbnb-delivery-frontend.vercel.app/partner/${aliado.qr_access_token}`;
+    fetch(`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(urlDestino)}&color=0f172a&bgcolor=ffffff`)
+      .then(r => r.blob())
+      .then(b => {
+        const a = document.createElement('a');
+        a.href = window.URL.createObjectURL(b);
+        a.download = `QR_Aliado_${aliado.nombre.replace(/\s+/g,'_')}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      })
+      .catch(() => this.mostrarToast('❌ Error descargando QR'));
+  }
+
   guardarContacto() {
     const modificado = this.aliadoEnContacto();
     if (!modificado) return;
@@ -283,7 +416,6 @@ export class AliadosList implements OnInit, AfterViewInit {
     modificado.correo_contacto = modificado.correo_contacto?.trim() || '';
     modificado.telefono_contacto = modificado.telefono_contacto?.trim() || '';
 
-    // AHORA VALIDA LOS 3 CAMPOS (Nombre, Correo, Teléfono)
     const faltaInfo = !modificado.nombre_contacto || !modificado.correo_contacto || !modificado.telefono_contacto;
     
     if (faltaInfo) {
@@ -295,7 +427,6 @@ export class AliadosList implements OnInit, AfterViewInit {
 
     const directa = this.contactoEdicionDirecta();
 
-    // Si se está editando desde el directorio (ya existe en BD)
     if (directa && directa.id) {
        const original = this.aliados().find(a => a.id === directa.id);
        if (original) {
@@ -323,7 +454,6 @@ export class AliadosList implements OnInit, AfterViewInit {
        return;
     }
 
-    // Si se está editando desde el Modal de Creación (aún no existe en BD)
     this.nuevoAliado.update(a => ({
        ...a,
        estado_operativo: modificado.estado_operativo,
@@ -348,8 +478,6 @@ export class AliadosList implements OnInit, AfterViewInit {
     this.nuevoAliado.update(al => ({ ...al, estado_operativo: estado ? 'Abierto' : 'Cerrado' }));
   }
 
-
-  // --- CRUD BASE Y MODALES ---
   getCategoriaInfo(id: number | null): { nombre: string, icono: string } {
     const cat = this.categorias().find(c => c.id === id);
     return cat ? { nombre: cat.nombre, icono: cat.icono || '🏷️' } : { nombre: 'Sin Categoría', icono: '❓' };
@@ -434,7 +562,8 @@ export class AliadosList implements OnInit, AfterViewInit {
     }
   }
 
-  eliminarAliado(aliado: Aliado) {
+  eliminarAliado(aliado: Aliado, event?: Event) {
+    if (event) event.stopPropagation();
     if (confirm(`⚠️ ¿Deseas eliminar permanentemente al comercio "${aliado.nombre}" y todo su catálogo?`)) {
       if (aliado.logo_url && aliado.logo_url.includes('cloudinary')) this.adminService.deleteImagen(aliado.logo_url).subscribe(); 
       this.adminService.deleteAliado(aliado.id!).subscribe({
@@ -457,7 +586,6 @@ export class AliadosList implements OnInit, AfterViewInit {
     });
   }
 
-  // --- OPTIMIZACIÓN IMÁGENES CLOUDINARY ---
   async onImagenSeleccionada(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (file) {

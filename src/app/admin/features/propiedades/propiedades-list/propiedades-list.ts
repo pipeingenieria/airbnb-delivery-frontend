@@ -36,6 +36,7 @@ export interface AptoUI {
   templateUrl: './propiedades-list.html'
 })
 export class PropiedadesList implements OnInit, AfterViewInit {
+  categoriasBD = signal<any[]>([]);
   subiendoImagen = signal<boolean>(false);
   private adminService = inject(AdminService);
   
@@ -203,12 +204,14 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     forkJoin({
       zonas: this.adminService.getZonas(),
       props: this.adminService.getPropiedades(),
-      aliados: this.adminService.getAliados() 
+      aliados: this.adminService.getAliados(),
+      categorias: this.adminService.getCategorias() // <-- AÑADIDO
     }).subscribe({
       next: (res) => {
         this.zonasActivas.set(res.zonas);
         this.propiedades.set(res.props);
         this.aliadosBD.set(res.aliados);
+        this.categoriasBD.set(res.categorias.filter((c: any) => c.activo)); // <-- AÑADIDO
         
         this.actualizarMarcadoresEnMapa();
         this.actualizarAliadosEnMapa(); 
@@ -244,42 +247,6 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     setTimeout(() => { this.map.invalidateSize(); this.actualizarMarcadoresEnMapa(); }, 200);
   }
 
-  actualizarAliadosEnMapa() {
-    if (!this.map) return;
-    this.aliadosLayer.clearLayers();
-
-    // Ícono de Aliados (Puntos de interés secundarios, color oscuro/pizarra, más pequeños)
-    const iconoAliado = L.divIcon({
-      className: 'bg-transparent border-0',
-      html: `<div style="width: 22px; height: 22px; background: #475569; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1.5px solid rgba(255,255,255,0.8); box-shadow: 0 2px 4px rgba(0,0,0,0.3); color: white; opacity: 0.9;">
-               <svg style="width: 10px; height: 10px;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-             </div>`,
-      iconSize: [22, 22],
-      iconAnchor: [11, 11],
-      popupAnchor: [0, -11]
-    });
-
-    this.aliadosBD().forEach(aliado => {
-      if (aliado.latitud && aliado.longitud) {
-        const marker = L.marker([aliado.latitud, aliado.longitud], { icon: iconoAliado });
-        // BLOQUEO DE DOBLE CLIC EN ALIADOS
-        marker.on('dblclick', (e: any) => { L.DomEvent.stopPropagation(e); });
-        
-        marker.bindPopup(`
-          <div style="font-family: sans-serif; text-align: center; min-width: 100px; padding: 2px;">
-            <strong style="color: #0f172a; font-size: 12px;">${aliado.nombre}</strong><br>
-            <span style="color: #64748b; font-size: 10px; font-weight: bold;">🏪 Socio Comercial</span>
-          </div>
-        `);
-        this.aliadosLayer.addLayer(marker);
-      }
-    });
-
-    if (this.map.getZoom() >= 12.5) {
-      this.map.addLayer(this.aliadosLayer);
-    }
-  }
-
   actualizarMarcadoresEnMapa() {
     if (!this.map) return;
     this.markersLayer.clearLayers();
@@ -303,7 +270,6 @@ export class PropiedadesList implements OnInit, AfterViewInit {
       const shadowStyle = grupo.activo ? `box-shadow: 0 4px 15px ${colorPin};` : 'box-shadow: 0 4px 10px rgba(0,0,0,0.5);';
       const shadowEdificio = grupo.activo ? `box-shadow: 0 4px 15px ${colorEdificio};` : 'box-shadow: 0 4px 10px rgba(0,0,0,0.5);';
 
-      // ÍCONOS PROFESIONALES (CASA PARA APTO, EDIFICIO PARA MULTIPLE)
       const pinIcon = L.divIcon({ 
           className: 'custom-property-pin', 
           html: `<div style="background-color: ${colorPin}; width: 34px; height: 34px; border-radius: 50%; border: 3px solid #fff; ${shadowStyle} display:flex; align-items:center; justify-content:center; color:white;">
@@ -358,6 +324,50 @@ export class PropiedadesList implements OnInit, AfterViewInit {
       marker.on('dblclick', (e: any) => { L.DomEvent.stopPropagation(e); this.abrirEditorGrupo(grupo.propiedades); });
       this.markersLayer.addLayer(marker);
     });
+  }
+
+  actualizarAliadosEnMapa() {
+    if (!this.map) return;
+    this.aliadosLayer.clearLayers();
+
+    this.aliadosBD().forEach(aliado => {
+      if (aliado.latitud && aliado.longitud) {
+        const colorPin = aliado.estado_operativo === 'Abierto' ? '#f43f5e' : '#64748b'; 
+        const borderPin = aliado.estado_operativo === 'Abierto' ? 'border: 1.5px solid rgba(255,255,255,0.8);' : 'border: 1.5px dashed rgba(255,255,255,0.4); opacity: 0.85;';
+        
+        // Buscamos la info de la categoría
+        const cat = this.categoriasBD().find(c => c.id === aliado.categoria_id);
+        const nombreCat = cat ? cat.nombre : 'Socio Comercial';
+        const emoji = cat ? (cat.icono || '🏪') : '🏪';
+
+        // 🔍 CAMBIO AQUÍ: opacity: 0.75; para que se vean un poco transparentes
+        const pinIcon = L.divIcon({
+          className: 'bg-transparent border-0',
+          html: `<div style="width: 28px; height: 28px; background: ${colorPin}; border-radius: 50%; display: flex; align-items: center; justify-content: center; ${borderPin} box-shadow: 0 2px 4px rgba(0,0,0,0.3); color: white; opacity: 0.75; font-size: 15px; line-height: 1;">
+                   <span style="text-shadow: -1px -1px 0 rgba(15,23,42,0.9), 1px -1px 0 rgba(15,23,42,0.9), -1px 1px 0 rgba(15,23,42,0.9), 1px 1px 0 rgba(15,23,42,0.9);">${emoji}</span>
+                 </div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
+        });
+
+        const marker = L.marker([aliado.latitud, aliado.longitud], { icon: pinIcon });
+        
+        // Bloquear doble clic para que no cree propiedades falsas
+        marker.on('dblclick', (e: any) => { L.DomEvent.stopPropagation(e); });
+        
+        marker.bindPopup(`
+          <div style="font-family: sans-serif; text-align: center; min-width: 100px; padding: 2px;">
+            <strong style="color: #0f172a; font-size: 12px;">${aliado.nombre}</strong><br>
+            <span style="color: ${colorPin}; font-size: 10px; font-weight: bold;">${emoji} ${nombreCat}</span>
+          </div>
+        `);
+        this.aliadosLayer.addLayer(marker);
+      }
+    });
+
+    if (this.map.getZoom() >= 12.5) {
+      this.map.addLayer(this.aliadosLayer);
+    }
   }
 
   abrirPortalDirecto(token: string | undefined, event: Event) {

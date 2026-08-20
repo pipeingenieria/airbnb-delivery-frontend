@@ -33,6 +33,7 @@ export class ZonasList implements OnInit, AfterViewInit {
   // NUEVAS SEÑALES PARA PUNTOS DE INTERÉS
   propiedadesBD = signal<any[]>([]);
   aliadosBD = signal<any[]>([]);
+  categoriasBD = signal<any[]>([]);
 
   // ESTADO PARA FILTRO Y PAGINACIÓN
   filtroLista = signal<string>('');
@@ -133,6 +134,11 @@ export class ZonasList implements OnInit, AfterViewInit {
       next: (data) => { this.aliadosBD.set(data); this.actualizarDetallesMapa(); },
       error: () => console.error("No se pudieron cargar los aliados")
     });
+
+    this.adminService.getCategorias().subscribe({
+      next: (data) => { this.categoriasBD.set(data); this.actualizarDetallesMapa(); },
+      error: () => console.error("No se pudieron cargar las categorias")
+    });
   }
 
   actualizarDetallesMapa() {
@@ -171,13 +177,33 @@ export class ZonasList implements OnInit, AfterViewInit {
       }
     });
 
+    // Inyectar Aliados al Layer
     this.aliadosBD().forEach(aliado => {
       if (aliado.latitud && aliado.longitud) {
-        const marker = L.marker([aliado.latitud, aliado.longitud], { icon: iconoAliado });
+        
+        // 1. Buscar la info de la categoría
+        const cat = this.categoriasBD().find(c => c.id === aliado.categoria_id);
+        const nombreCat = cat ? cat.nombre : 'Socio Comercial';
+        const iconoCat = cat ? (cat.icono || '🏪') : '🏪';
+
+        // 2. Crear el ÍCONO DINÁMICO leyendo el emoji de la categoría con borde oscuro
+        const iconoAliadoDinamico = L.divIcon({
+          className: 'bg-transparent border-0',
+          html: `<div style="width: 28px; height: 28px; background: #f43f5e; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); color: white; font-size: 14px; line-height: 1;">
+                   <span style="text-shadow: -1px -1px 0 rgba(15,23,42,0.9), 1px -1px 0 rgba(15,23,42,0.9), -1px 1px 0 rgba(15,23,42,0.9), 1px 1px 0 rgba(15,23,42,0.9);">${iconoCat}</span>
+                 </div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14],
+          popupAnchor: [0, -14]
+        });
+
+        // 3. Asignar el marcador con el nuevo ícono dinámico
+        const marker = L.marker([aliado.latitud, aliado.longitud], { icon: iconoAliadoDinamico });
+        
         marker.bindPopup(`
           <div style="font-family: sans-serif; text-align: center; min-width: 120px;">
             <strong style="color: #0f172a; font-size: 13px;">${aliado.nombre}</strong><br>
-            <span style="color: #f43f5e; font-size: 11px; font-weight: bold;">🏪 Socio Comercial</span>
+            <span style="color: #f43f5e; font-size: 11px; font-weight: bold;">${iconoCat} ${nombreCat}</span>
           </div>
         `);
         this.detallesLayer.addLayer(marker);

@@ -22,7 +22,6 @@
 
 <div class="space-y-4 lg:space-y-6 flex flex-col w-full animate-entrance-fixed pb-6 lg:pb-0">
   
-  <!-- HEADER -->
   <div class="flex flex-col lg:flex-row lg:items-center lg:justify-start gap-4 lg:gap-10 shrink-0">
     <div>
       <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Centro de Aliados</h2>
@@ -43,29 +42,35 @@
     </div>
   </div>
 
-  <!-- CONTENIDO DIVIDIDO: MAPA Y DIRECTORIO -->
   <div class="w-full flex flex-col lg:flex-row gap-6 h-[65vh] lg:h-[calc(100vh-220px)]">
     
-    <!-- MAPA PRINCIPAL -->
     <div class="w-full lg:flex-1 h-[60vh] lg:h-full relative rounded-3xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900 shrink-0">
       <div class="absolute top-4 left-4 z-[400] pointer-events-none">
         <div class="px-4 py-2.5 rounded-2xl bg-slate-950/90 backdrop-blur-md border border-slate-800 text-xs font-bold text-white shadow-lg flex items-center gap-2.5">
           <span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500 shadow-[0_0_8px_#f43f5e]"></span></span>
-          <span>{{ aliadosFiltrados().length }} Aliados Operativos</span>
+          <span>{{ aliadosFiltrados().length }} Aliados Listados</span>
         </div>
       </div>
       <div id="aliados-map" class="absolute inset-0 z-10"></div>
     </div>
 
-    <!-- DIRECTORIO LATERAL -->
     <div class="w-full lg:w-[400px] shrink-0 bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-5 flex flex-col shadow-xl h-[50vh] lg:h-full">
       <div class="flex justify-between items-center mb-4 px-1 shrink-0">
         <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">Directorio de Aliados</h3>
       </div>
 
-      <div class="mb-4 relative shrink-0">
-        <input type="text" [ngModel]="filtroTexto()" (input)="actualizarFiltro($event)" placeholder="Filtrar por comercio o correo..." class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-950/80 border border-slate-700 text-white text-sm focus:border-rose-500 focus:outline-none transition-colors shadow-inner">
-        <svg class="w-4 h-4 text-slate-500 absolute left-3 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+      <!-- BUSCADOR CON SELECTOR INTEGRADO -->
+      <div class="mb-4 flex gap-2 shrink-0 relative">
+        <div class="relative w-full">
+          <input type="text" [ngModel]="filtroTexto()" (input)="actualizarFiltro($event)" placeholder="Filtrar..." class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-950/80 border border-slate-700 text-white text-sm focus:border-rose-500 focus:outline-none transition-colors shadow-inner">
+          <svg class="w-4 h-4 text-slate-500 absolute left-3 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </div>
+        <select [ngModel]="filtroEstado()" (ngModelChange)="filtroEstado.set($event)" class="px-3 py-2.5 rounded-xl bg-slate-950/80 border border-slate-700 text-slate-300 text-sm focus:outline-none focus:border-rose-500 cursor-pointer shadow-inner shrink-0 appearance-none font-medium">
+          <option value="todos">Todos</option>
+          <option value="activos">Abiertos</option>
+          <option value="inactivos">Cerrados</option>
+          <option value="falta_contacto">⚠️ Falta Contacto</option>
+        </select>
       </div>
 
       <div class="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
@@ -104,15 +109,19 @@
                   </div>
                 </div>
                 
+                <!-- BOTONES DE ACCIÓN (LIMPIOS, SIN EL QR) -->
                 <div class="flex gap-0.5 shrink-0">
-                  <button (click)="descargarQR(aliado, $event)" (mouseenter)="mostrarTooltip($event, 'QR del Portal')" (mouseleave)="ocultarTooltip()" class="p-1.5 text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-all">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+                  <button (click)="abrirPortalDirecto(aliado.qr_access_token, $event)" (mouseenter)="mostrarTooltip($event, 'Abrir Portal del Socio')" (mouseleave)="ocultarTooltip()" class="p-1.5 text-slate-500 hover:text-cyan-400 hover:bg-cyan-500/10 rounded-lg transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                   </button>
-                  <button (click)="abrirContactoDesdeDirectorio(aliado, $event)" (mouseenter)="mostrarTooltip($event, 'Gestionar Accesos')" (mouseleave)="ocultarTooltip()" class="p-1.5 text-slate-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-all">
+                  <button (click)="abrirContactoDesdeDirectorio(aliado, $event)" (mouseenter)="mostrarTooltip($event, 'Gestionar Accesos y QR')" (mouseleave)="ocultarTooltip()" class="p-1.5 text-slate-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-all">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                   </button>
                   <button (click)="abrirModalEditar(aliado); $event.stopPropagation();" (mouseenter)="mostrarTooltip($event, 'Editar Comercio')" (mouseleave)="ocultarTooltip()" class="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                  </button>
+                  <button (click)="eliminarAliado(aliado, $event)" (mouseenter)="mostrarTooltip($event, 'Eliminar Comercio')" (mouseleave)="ocultarTooltip()" class="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                   </button>
                 </div>
               </div>
@@ -132,14 +141,13 @@
   </div>
 </div>
 
-<!-- MODAL CREACIÓN / EDICIÓN ESPACIAL -->
 @if (modalAbierto()) {
   <div class="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-slate-950/90 backdrop-blur-sm animate-entrance-fixed">
     <div class="w-full max-w-4xl max-h-[95vh] bg-slate-900 border border-slate-800 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col">
       
       <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/60 shrink-0">
         <h3 class="text-base font-bold text-white flex items-center gap-2">
-          <svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+          <svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
           {{ editandoId() ? 'Configurar Aliado Comercial' : 'Integrar Nuevo Aliado' }}
         </h3>
         <button (click)="cerrarModal()" class="text-slate-400 hover:text-white bg-slate-800 hover:bg-rose-500 p-1.5 rounded-lg transition-colors">
@@ -150,7 +158,6 @@
       <div class="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
           
-          <!-- COLUMNA IZQUIERDA -->
           <div class="space-y-5">
             <div class="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
               <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Estado Logístico</span>
@@ -174,7 +181,6 @@
               </select>
             </div>
 
-            <!-- TARJETA CONTACTO DEL PORTAL (Unificada) -->
             <div class="bg-slate-900/40 p-5 rounded-2xl border shadow-inner animate-entrance transition-all"
                  [ngClass]="{
                     'border-amber-500/50 bg-amber-500/5': !nuevoAliado().correo_contacto || !nuevoAliado().telefono_contacto,
@@ -228,7 +234,6 @@
             </div>
           </div>
 
-          <!-- COLUMNA DERECHA: Mapa -->
           <div class="space-y-4">
             <div>
               <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Dirección Física <span class="text-rose-500">*</span></label>
@@ -272,7 +277,6 @@
   </div>
 }
 
-<!-- MODAL SECUNDARIO: DATOS DE CONTACTO Y ACCESO (PORTAL) -->
 @if (modalContactoAbierto() && aliadoEnContacto()) {
   <div class="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-md animate-entrance-fixed">
     <div class="w-full max-w-md bg-slate-900 border border-slate-700 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col">
@@ -289,7 +293,6 @@
         </button>
       </div>
       
-      <!-- Body -->
     <div class="p-6 space-y-4 bg-slate-900/50">
         <div>
         <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Nombre y Apellido del Responsable <span class="text-rose-500">*</span></label>
@@ -306,10 +309,17 @@
     </div>
       
       <div class="px-6 py-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between">
-        <div class="flex-1">
+        <div class="flex-1 flex gap-4 items-center">
            @if (aliadoEnContacto()!.correo_contacto && aliadoEnContacto()!.estado_operativo === 'Abierto') {
              <button (click)="notificarContacto(aliadoEnContacto()!, $event)" data-tooltip="Reenviar Acceso" class="text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg> Enviar Acceso
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg> 
+                <span class="hidden sm:block">Reenviar</span>
+             </button>
+           }
+           @if (aliadoEnContacto()!.qr_access_token) {
+             <button (click)="descargarQRDesdeModal($event)" data-tooltip="Descargar QR" class="text-emerald-400 hover:text-emerald-300 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg> 
+                <span class="hidden sm:block">QR</span>
              </button>
            }
         </div>
@@ -324,7 +334,6 @@
   </div>
 }
 
-<!-- MODAL ANIMACIÓN CELEBRACIÓN DE NUEVO ALIADO -->
 @if (showCelebration()) {
   <div class="fixed inset-0 z-[10000] flex items-center justify-center pointer-events-none">
     <div class="absolute inset-0 bg-slate-950/60 animate-fade-in-blur"></div>
