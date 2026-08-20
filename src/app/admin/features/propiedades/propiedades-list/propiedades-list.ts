@@ -45,7 +45,6 @@ export class PropiedadesList implements OnInit, AfterViewInit {
   ultimoAptoAgregado = signal<string | null>(null);
   aptosEliminando = signal<string[]>([]);
 
-  // NUEVO: Estado para controlar la animación de celebración
   showCelebration = signal<boolean>(false);
 
   modalContactoAbierto = signal<boolean>(false);
@@ -54,6 +53,7 @@ export class PropiedadesList implements OnInit, AfterViewInit {
 
   propiedades = signal<Propiedad[]>([]);
   zonasActivas = signal<Zona[]>([]);
+  aliadosBD = signal<any[]>([]); 
   cargando = signal<boolean>(true);
   
   propiedadesActivasCount = computed(() => 
@@ -100,7 +100,7 @@ export class PropiedadesList implements OnInit, AfterViewInit {
   });
 
   formularioValido = computed(() => {
-    if (this.subiendoImagen()) return false; // Bloquea el botón si está subiendo
+    if (this.subiendoImagen()) return false;
     const prop = this.nuevaPropiedad();
     if (!prop.nombre || prop.nombre.trim() === '') return false;
     if (!this.esDireccionValida()) return false;
@@ -179,11 +179,12 @@ export class PropiedadesList implements OnInit, AfterViewInit {
   private map!: L.Map;
   private markersLayer = L.layerGroup();
   private mainZonasLayer = L.layerGroup(); 
+  private aliadosLayer = L.layerGroup(); 
+  
   private miniMap: L.Map | null = null;
   private miniMapMarker: L.Marker | null = null;
   private zonasLayersLayer = L.layerGroup(); 
 
-  // MÉTODOS BASE Y MAPA
   toggleEdificio(id: string, event: Event) {
     event.stopPropagation();
     this.edificiosExpandidos.update(state => ({ ...state, [id]: !state[id] }));
@@ -192,7 +193,6 @@ export class PropiedadesList implements OnInit, AfterViewInit {
   ngOnInit() { this.cargarDatos(); }
   ngAfterViewInit() { this.initMainMap(); }
 
-  // ANIMACIÓN DE NUEVO ALIADO
   lanzarCelebracion() {
     this.showCelebration.set(true);
     setTimeout(() => this.showCelebration.set(false), 4500);
@@ -200,17 +200,19 @@ export class PropiedadesList implements OnInit, AfterViewInit {
 
   cargarDatos() {
     this.cargando.set(true);
-    this.adminService.getZonas().subscribe({
-      next: (zonas) => {
-        this.zonasActivas.set(zonas);
-        this.adminService.getPropiedades().subscribe({
-          next: (props) => {
-            this.propiedades.set(props);
-            this.actualizarMarcadoresEnMapa();
-            this.cargando.set(false);
-          },
-          error: (err) => { console.error(err); this.cargando.set(false); }
-        });
+    forkJoin({
+      zonas: this.adminService.getZonas(),
+      props: this.adminService.getPropiedades(),
+      aliados: this.adminService.getAliados() 
+    }).subscribe({
+      next: (res) => {
+        this.zonasActivas.set(res.zonas);
+        this.propiedades.set(res.props);
+        this.aliadosBD.set(res.aliados);
+        
+        this.actualizarMarcadoresEnMapa();
+        this.actualizarAliadosEnMapa(); 
+        this.cargando.set(false);
       },
       error: (err) => { console.error(err); this.cargando.set(false); }
     });
@@ -225,12 +227,57 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     this.mainZonasLayer.addTo(this.map);
     this.markersLayer.addTo(this.map);
 
+    this.map.on('zoomend', () => {
+      const zoomActual = this.map.getZoom();
+      if (zoomActual >= 12.5) {
+        if (!this.map.hasLayer(this.aliadosLayer)) this.map.addLayer(this.aliadosLayer);
+      } else {
+        if (this.map.hasLayer(this.aliadosLayer)) this.map.removeLayer(this.aliadosLayer);
+      }
+    });
+
     this.map.on('dblclick', (e: L.LeafletMouseEvent) => {
       L.DomEvent.stopPropagation(e);
       this.abrirModalCrear(e.latlng.lat, e.latlng.lng);
     });
 
     setTimeout(() => { this.map.invalidateSize(); this.actualizarMarcadoresEnMapa(); }, 200);
+  }
+
+  actualizarAliadosEnMapa() {
+    if (!this.map) return;
+    this.aliadosLayer.clearLayers();
+
+    // Ícono de Aliados (Puntos de interés secundarios, color oscuro/pizarra, más pequeños)
+    const iconoAliado = L.divIcon({
+      className: 'bg-transparent border-0',
+      html: `<div style="width: 22px; height: 22px; background: #475569; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1.5px solid rgba(255,255,255,0.8); box-shadow: 0 2px 4px rgba(0,0,0,0.3); color: white; opacity: 0.9;">
+               <svg style="width: 10px; height: 10px;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+             </div>`,
+      iconSize: [22, 22],
+      iconAnchor: [11, 11],
+      popupAnchor: [0, -11]
+    });
+
+    this.aliadosBD().forEach(aliado => {
+      if (aliado.latitud && aliado.longitud) {
+        const marker = L.marker([aliado.latitud, aliado.longitud], { icon: iconoAliado });
+        // BLOQUEO DE DOBLE CLIC EN ALIADOS
+        marker.on('dblclick', (e: any) => { L.DomEvent.stopPropagation(e); });
+        
+        marker.bindPopup(`
+          <div style="font-family: sans-serif; text-align: center; min-width: 100px; padding: 2px;">
+            <strong style="color: #0f172a; font-size: 12px;">${aliado.nombre}</strong><br>
+            <span style="color: #64748b; font-size: 10px; font-weight: bold;">🏪 Socio Comercial</span>
+          </div>
+        `);
+        this.aliadosLayer.addLayer(marker);
+      }
+    });
+
+    if (this.map.getZoom() >= 12.5) {
+      this.map.addLayer(this.aliadosLayer);
+    }
   }
 
   actualizarMarcadoresEnMapa() {
@@ -251,13 +298,31 @@ export class PropiedadesList implements OnInit, AfterViewInit {
       const lng = grupo.longitud;
       if(!lat || !lng) return;
 
-      const colorPin = grupo.activo ? '#3b82f6' : '#475569';
-      const colorEdificio = grupo.activo ? '#8b5cf6' : '#475569';
-      const borderStyle = grupo.activo ? 'border: 2px solid #fff;' : 'border: 2px dashed #94a3b8; opacity: 0.85;';
-      const shadowStyle = grupo.activo ? `box-shadow: 0 0 10px ${colorPin};` : 'box-shadow: none;';
+      const colorPin = grupo.activo ? '#3b82f6' : '#64748b';
+      const colorEdificio = grupo.activo ? '#8b5cf6' : '#64748b';
+      const shadowStyle = grupo.activo ? `box-shadow: 0 4px 15px ${colorPin};` : 'box-shadow: 0 4px 10px rgba(0,0,0,0.5);';
+      const shadowEdificio = grupo.activo ? `box-shadow: 0 4px 15px ${colorEdificio};` : 'box-shadow: 0 4px 10px rgba(0,0,0,0.5);';
 
-      const pinIcon = L.divIcon({ className: 'custom-property-pin', html: `<div style="background-color: ${colorPin}; width: 14px; height: 14px; border-radius: 50%; ${borderStyle} ${shadowStyle}"></div>`, iconSize: [14, 14] });
-      const edificioIcon = L.divIcon({ className: 'custom-building-pin', html: `<div style="background-color: ${colorEdificio}; width: 18px; height: 18px; border-radius: 4px; ${borderStyle} ${shadowStyle} display:flex; align-items:center; justify-content:center;"><span style="color:white; font-size:9px; font-weight:bold;">E</span></div>`, iconSize: [18, 18] });
+      // ÍCONOS PROFESIONALES (CASA PARA APTO, EDIFICIO PARA MULTIPLE)
+      const pinIcon = L.divIcon({ 
+          className: 'custom-property-pin', 
+          html: `<div style="background-color: ${colorPin}; width: 34px; height: 34px; border-radius: 50%; border: 3px solid #fff; ${shadowStyle} display:flex; align-items:center; justify-content:center; color:white;">
+                  <svg style="width:16px; height:16px;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                 </div>`, 
+          iconSize: [34, 34],
+          iconAnchor: [17, 17],
+          popupAnchor: [0, -17]
+      });
+
+      const edificioIcon = L.divIcon({ 
+          className: 'custom-building-pin', 
+          html: `<div style="background-color: ${colorEdificio}; width: 34px; height: 34px; border-radius: 8px; border: 3px solid #fff; ${shadowEdificio} display:flex; align-items:center; justify-content:center; color:white;">
+                  <svg style="width:18px; height:18px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                 </div>`, 
+          iconSize: [34, 34],
+          iconAnchor: [17, 17],
+          popupAnchor: [0, -17]
+      });
 
       const marker = L.marker([lat, lng], { icon: grupo.esEdificio ? edificioIcon : pinIcon });
       marker.on('click', (e: any) => L.DomEvent.stopPropagation(e));
@@ -295,7 +360,14 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     });
   }
 
-  // --- LÓGICA DE APARTAMENTOS Y EDICIÓN ---
+  abrirPortalDirecto(token: string | undefined, event: Event) {
+    event.stopPropagation();
+    if (token) {
+      window.open(`https://airbnb-delivery-frontend.vercel.app/${token}`, '_blank');
+    } else {
+      alert('Esta propiedad aún no tiene un token válido. Guárdala para generarlo.');
+    }
+  }
 
   abrirEditorGrupo(props: Propiedad[], event?: Event) {
     if (event) event.stopPropagation();
@@ -403,7 +475,6 @@ export class PropiedadesList implements OnInit, AfterViewInit {
       );
       this.listaAptos.set(nuevaLista);
       
-      const nombreEdificio = this.nuevaPropiedad().nombre || 'el edificio';
       const ultimoAgregado = filtradosObj[filtradosObj.length - 1].nomenclatura;
       
       this.toastMessage.set(`✅ Apto ${ultimoAgregado} añadido. Edita el contacto para activarlo.`);
@@ -439,8 +510,6 @@ export class PropiedadesList implements OnInit, AfterViewInit {
       }, 350); 
     }
   }
-
-  // --- LÓGICA DEL MODAL DE CONTACTO UNIFICADO ---
 
   abrirContactoDesdeDirectorio(prop: Propiedad, event: Event) {
     event.stopPropagation();
@@ -488,6 +557,25 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     this.modalContactoAbierto.set(false);
     this.aptoEnContacto.set(null);
     this.contactoEdicionDirecta.set(null);
+  }
+
+  // DESCARGA DE QR DESDE EL MODAL DE CONTACTO
+  descargarQRDesdeModal(event: Event) {
+    event.stopPropagation();
+    const apto = this.aptoEnContacto();
+    if (!apto || !apto.qr_access_token) return;
+    
+    const urlDestino = `https://airbnb-delivery-frontend.vercel.app/${apto.qr_access_token}`;
+    const url = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(urlDestino)}&color=0f172a&bgcolor=ffffff`;
+    
+    fetch(url).then(res => res.blob()).then(blob => {
+      const a = document.createElement('a');
+      a.href = window.URL.createObjectURL(blob);
+      a.download = `QR_${apto.nomenclatura.replace(/\s+/g, '_')}.png`;
+      document.body.appendChild(a); 
+      a.click(); 
+      document.body.removeChild(a);
+    }).catch(() => this.toastMessage.set('❌ Error descargando QR'));
   }
 
   guardarContacto() {
@@ -637,12 +725,9 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     });
   }
 
-  // --- LÓGICA BASE RESTANTE ---
-
   async onImagenSeleccionada(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (file) {
-      // 1. Guardar la URL vieja en memoria por si necesitamos destruirla
       const urlAntigua = this.nuevaPropiedad().imagen_url;
 
       const reader = new FileReader();
@@ -659,9 +744,8 @@ export class PropiedadesList implements OnInit, AfterViewInit {
           next: (res) => {
             const urlFinal = this.optimizarUrlCloudinary(res.url);
 
-            // 💥 DESTRUCCIÓN DE LA IMAGEN ANTERIOR (Ahorro de espacio en Cloudinary)
             if (urlAntigua && urlAntigua.includes('cloudinary')) {
-              this.adminService.deleteImagen(urlAntigua).subscribe(); // Se ejecuta de forma silenciosa
+              this.adminService.deleteImagen(urlAntigua).subscribe(); 
             }
 
             this.nuevaPropiedad.update(p => ({ ...p, imagen_url: urlFinal }));
@@ -672,7 +756,6 @@ export class PropiedadesList implements OnInit, AfterViewInit {
           },
           error: () => {
             this.subiendoImagen.set(false);
-            // Revertimos el preview si falla
             this.imagenPreview.set(urlAntigua || null);
             this.toastMessage.set('❌ Error de conexión al subir la imagen. Intenta de nuevo.');
             setTimeout(() => this.toastMessage.set(null), 4000);
@@ -776,9 +859,8 @@ export class PropiedadesList implements OnInit, AfterViewInit {
       : `¿Seguro que deseas eliminar la propiedad "${grupo.nombrePrincipal}"?`;
       
     if (confirm(mensaje)) {
-      // 💥 Destruir la imagen de Cloudinary al eliminar el grupo completo
       if (grupo.imagen_url && grupo.imagen_url.includes('cloudinary')) {
-         this.adminService.deleteImagen(grupo.imagen_url).subscribe(); // Disparo silencioso
+         this.adminService.deleteImagen(grupo.imagen_url).subscribe(); 
       }
 
       const requests = grupo.propiedades.map(p => this.adminService.deletePropiedad(p.id!));
@@ -787,36 +869,6 @@ export class PropiedadesList implements OnInit, AfterViewInit {
         error: () => alert('Error al eliminar.')
       });
     }
-  }
-
-  descargarQR(grupo: GrupoPropiedad, event: Event) {
-    event.stopPropagation();
-    grupo.propiedades.forEach((prop, index) => {
-      if (!prop.qr_access_token) return;
-      setTimeout(() => {
-        const urlDestino = `https://airbnb-delivery-frontend.vercel.app/${prop.qr_access_token}`;
-        const url = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(urlDestino)}&color=0f172a&bgcolor=ffffff`;
-        fetch(url).then(res => res.blob()).then(blob => {
-          const a = document.createElement('a');
-          a.href = window.URL.createObjectURL(blob);
-          a.download = `QR_${prop.nombre.replace(/\s+/g, '_')}.png`;
-          document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        }).catch(() => console.error('Error QR'));
-      }, index * 400); 
-    });
-  }
-
-  descargarQRUnico(prop: Propiedad, event: Event) {
-    event.stopPropagation();
-    if (!prop.qr_access_token) return;
-    const urlDestino = `https://airbnb-delivery-frontend.vercel.app/${prop.qr_access_token}`;
-    const url = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(urlDestino)}&color=0f172a&bgcolor=ffffff`;
-    fetch(url).then(res => res.blob()).then(blob => {
-      const a = document.createElement('a');
-      a.href = window.URL.createObjectURL(blob);
-      a.download = `QR_${prop.nombre.replace(/\s+/g, '_')}.png`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    }).catch(() => alert('Error QR'));
   }
 
   cerrarModal() {
@@ -923,7 +975,6 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     const originales = this.propiedadesEdificioOriginal();
     const requests: any[] = [];
     
-    // Verificamos si en la edición general del edificio algún apartamento se activó por primera vez
     let algunAptoNuevoActivado = false;
 
     originales.forEach(orig => {
@@ -958,7 +1009,6 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     const aptosNuevos = aptosActuales.filter(a => !aptosOriginalesNombres.includes(a.nomenclatura));
     
     aptosNuevos.forEach(nuevoObj => {
-      // Los aptos nuevos recién creados en el form nacen sin datos de anfitrión, por ende no se activan automáticamente aquí
       requests.push(this.adminService.createPropiedad({ 
         ...propData, 
         nombre: `${propData.nombre} - Apto ${nuevoObj.nomenclatura}`, 
@@ -1016,7 +1066,6 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     } catch (e) { }
   }
 
-  // --- GESTIÓN GLOBAL DE TOOLTIPS FLOTANTES ---
   mostrarTooltip(event: MouseEvent, texto: string) {
     const target = event.currentTarget as HTMLElement;
     const rect = target.getBoundingClientRect();
@@ -1054,24 +1103,11 @@ export class PropiedadesList implements OnInit, AfterViewInit {
     if (tooltip) tooltip.remove();
   }
 
-  // ==========================================
-  // MOTOR DE OPTIMIZACIÓN DE IMÁGENES
-  // ==========================================
-
-  /**
-   * Modifica la URL de Cloudinary para inyectar q_auto (calidad automática)
-   * y f_auto (formato automático: AVIF, WebP o JPEG según el navegador del usuario).
-   */
   private optimizarUrlCloudinary(url: string): string {
     if (!url.includes('cloudinary.com')) return url;
-    // Interceptamos la URL y añadimos los parámetros mágicos justo después de "/upload/"
     return url.replace('/upload/', '/upload/q_auto,f_auto/');
   }
 
-  /**
-   * Comprime la imagen pesada del usuario directamente en la memoria de su navegador
-   * usando Canvas HTML5, redimensionándola a un tamaño web óptimo y formato WebP.
-   */
   private async comprimirImagenProfesional(file: File, maxWidth = 1280, maxHeight = 1280, quality = 0.8): Promise<File> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -1082,7 +1118,6 @@ export class PropiedadesList implements OnInit, AfterViewInit {
         img.src = event.target?.result as string;
         
         img.onload = () => {
-          // Calculamos las nuevas dimensiones manteniendo el Aspect Ratio
           let width = img.width;
           let height = img.height;
 
@@ -1094,7 +1129,6 @@ export class PropiedadesList implements OnInit, AfterViewInit {
             height = maxHeight;
           }
 
-          // Creamos un lienzo digital (Canvas)
           const canvas = document.createElement('canvas');
           canvas.width = width;
           canvas.height = height;
@@ -1102,15 +1136,11 @@ export class PropiedadesList implements OnInit, AfterViewInit {
           const ctx = canvas.getContext('2d');
           if (!ctx) return reject('No se pudo crear el contexto del canvas');
 
-          // Dibujamos la imagen redimensionada
           ctx.drawImage(img, 0, 0, width, height);
 
-          // Exportamos a WebP con calidad del 80% (Pérdida invisible al ojo humano pero altísima compresión)
           canvas.toBlob((blob) => {
             if (!blob) return reject('Error al comprimir la imagen');
-            
-            // Reconstruimos el archivo con la nueva data comprimida
-            const nombreLimpio = file.name.replace(/\.[^/.]+$/, ""); // Quita la extensión original
+            const nombreLimpio = file.name.replace(/\.[^/.]+$/, ""); 
             const compressedFile = new File([blob], `${nombreLimpio}_optimizada.webp`, {
               type: 'image/webp',
               lastModified: Date.now(),
