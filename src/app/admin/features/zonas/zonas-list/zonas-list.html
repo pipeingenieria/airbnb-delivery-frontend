@@ -1,0 +1,177 @@
+<div class="space-y-4 lg:space-y-6 flex flex-col w-full animate-entrance pb-6 lg:pb-0">
+  
+  <!-- CABECERA Y BUSCADOR -->
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-start gap-4 lg:gap-10 shrink-0">
+    
+    <!-- Se retiró el "flex-1" para que no empuje al buscador a la derecha -->
+    <div>
+      <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Centro de Geocercas</h2>
+      <p class="text-xs sm:text-sm text-slate-400 mt-1">Dibuja polígonos de cobertura para asignar restaurantes.</p>
+    </div>
+
+    <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+      <div class="relative w-full sm:w-72 lg:w-80">
+        <input type="text" [(ngModel)]="busquedaDireccion" (keyup.enter)="buscarEnMapa()" placeholder="Buscar barrio o dirección..." class="w-full pl-10 pr-16 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-400 text-sm focus:outline-none focus:border-rose-500 transition-all shadow-md">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </div>
+        <button (click)="buscarEnMapa()" class="absolute inset-y-1.5 right-1.5 px-3 bg-rose-600 hover:bg-rose-500 rounded-lg text-white text-[10px] font-bold uppercase tracking-wider transition-colors">Volar</button>
+      </div>
+
+      <button (click)="abrirModalCrear()" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-rose-600 to-rose-500 text-white shadow-lg shadow-rose-600/30 hover:from-rose-500 hover:to-rose-400 hover:shadow-xl hover:shadow-rose-500/60 hover:brightness-110 active:scale-95 active:brightness-125 border border-rose-400/30 shrink-0 transition-all duration-300">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+        Nueva Geocerca
+      </button>
+    </div>
+  </div>
+
+  <!-- CONTENEDOR FLEX: Ajustado para que sea un poco menos largo en PC -->
+  <div class="w-full flex flex-col lg:flex-row gap-6 h-[65vh] lg:h-[calc(100vh-220px)]">
+    
+    <!-- MAPA INTERACTIVO LEAFLET -->
+    <div class="w-full lg:flex-1 h-[60vh] lg:h-full relative rounded-3xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900 shrink-0">
+        <!-- MEDALLITA FLOTANTE DE ZONAS ACTIVAS (RESTAURADA) -->
+        <div class="absolute top-4 left-4 z-[400] pointer-events-none">
+            <div class="px-4 py-2.5 rounded-2xl bg-slate-950/90 backdrop-blur-md border border-slate-800 text-xs font-semibold text-white shadow-lg flex items-center gap-2.5">
+            <!-- Punto titilante (Ping) -->
+            <span class="relative flex h-2.5 w-2.5">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_8px_#34d399]"></span>
+            </span>
+            <span>{{ zonas().length }} Zonas Activas</span>
+            </div>
+        </div>
+
+        <div id="geocercas-map" class="absolute inset-0 z-10"></div>
+    </div>
+
+    <!-- PANEL LATERAL SCROLLABLE -->
+    <div class="w-full lg:w-[400px] shrink-0 bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-5 flex flex-col shadow-xl h-[50vh] lg:h-full">
+      
+      <!-- Título y Contador -->
+      <div class="flex justify-between items-center mb-4 px-1 shrink-0">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">Zonas Activas</h3>
+        <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold">{{ zonasFiltradas().length }}</span>
+      </div>
+
+      <!-- Buscador de la lista -->
+      <div class="mb-4 relative shrink-0">
+        <input type="text" [ngModel]="filtroLista()" (input)="actualizarFiltroLista($event)" placeholder="Filtrar nodos creados..." class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-950/80 border border-slate-700 text-white text-sm focus:border-rose-500 focus:outline-none transition-colors shadow-inner">
+        <svg class="w-4 h-4 text-slate-500 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+      </div>
+      
+      <!-- Lista Paginada -->
+      <div class="flex-1 overflow-y-auto space-y-3 pr-1">
+        @if (cargando()) {
+          @for (i of [1, 2, 3]; track i) {
+            <div class="h-24 rounded-2xl bg-slate-800/50 animate-pulse"></div>
+          }
+        } @else if (zonasFiltradas().length === 0) {
+          <div class="text-center py-10 text-slate-500 text-sm bg-slate-950/40 rounded-2xl border border-slate-800 border-dashed">
+            No se encontraron zonas que coincidan.
+          </div>
+        } @else {
+          <!-- ATENCIÓN: El loop ahora itera sobre zonasPaginadas() -->
+          @for (zona of zonasPaginadas(); track zona.id) {
+            <div class="group p-4 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-rose-500/50 transition-all flex flex-col gap-3">
+              <div class="flex justify-between items-start">
+                <div>
+                  <div class="flex items-center gap-2 mb-0.5">
+                    <span class="w-2 h-2 rounded-full" [ngClass]="zona.activo ? 'bg-emerald-500' : 'bg-rose-500'"></span>
+                    <h4 class="font-bold text-white text-sm">{{ zona.nombre }}</h4>
+                  </div>
+                  <p class="text-[11px] text-slate-400 leading-tight pr-2">{{ zona.ciudad }}</p>
+                </div>
+                <div class="flex gap-2 shrink-0">
+                  <button (click)="editarZona(zona, $event)" class="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-indigo-400 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                  </button>
+                  <button (click)="eliminarZona(zona, $event)" class="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-rose-500 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                  </button>
+                </div>
+              </div>
+              <button (click)="centrarEnZona(zona)" class="w-full py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors border border-slate-700">
+                Localizar en Mapa
+              </button>
+            </div>
+          }
+        }
+      </div>
+
+      <!-- Controles de Paginación -->
+      @if (totalPaginas() > 1) {
+        <div class="mt-4 pt-4 border-t border-slate-800 flex justify-between items-center shrink-0">
+          <button (click)="paginaAnterior()" [disabled]="paginaActual() === 1" class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path></svg>
+          </button>
+          
+          <span class="text-xs font-bold text-slate-400 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
+            {{ paginaActual() }} / {{ totalPaginas() }}
+          </span>
+          
+          <button (click)="paginaSiguiente()" [disabled]="paginaActual() === totalPaginas()" class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
+          </button>
+        </div>
+      }
+
+    </div>
+  </div>
+
+  <!-- MODAL DE CREACIÓN / EDICIÓN CON MINI-MAPA -->
+  @if (modalAbierto()) {
+    <div class="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-entrance">
+      <div class="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
+        
+        <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/60 shrink-0">
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            {{ editandoId() ? 'Editar Geocerca' : 'Configurar Geocerca' }}
+          </h3>
+          <button (click)="cerrarModal()" class="text-slate-400 hover:text-white p-1">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+        
+        <div class="p-6 overflow-y-auto space-y-5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Nombre del Nodo</label>
+              <input type="text" [(ngModel)]="nuevaZona().nombre" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-rose-500 shadow-inner">
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Dirección a buscar</label>
+              <div class="flex gap-2">
+                <input type="text" [(ngModel)]="nuevaZona().ciudad" (keyup.enter)="buscarDireccionModal()" placeholder="Ej: Parque de Bello..." class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-emerald-500/50 text-emerald-400 font-medium text-sm focus:outline-none focus:border-emerald-500 transition-colors shadow-inner">
+                <button (click)="buscarDireccionModal()" class="px-4 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-white text-xs font-bold transition-colors shadow-lg shrink-0">
+                  Buscar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <label class="text-xs font-bold uppercase tracking-wider text-slate-400">Radio de cobertura (metros)</label>
+              <span class="text-xs font-bold text-white bg-slate-800 px-3 py-1 rounded-lg">{{ nuevaZona().radio }}m</span>
+            </div>
+            <input type="range" min="100" max="5000" step="100" [(ngModel)]="nuevaZona().radio" (ngModelChange)="actualizarRadio()" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-rose-500">
+          </div>
+
+          <!-- MINIMAPA DE DETALLE (Ahora más alto en mobile: 320px) -->
+          <div>
+            <div id="minimap" class="w-full h-[320px] sm:h-[350px] rounded-2xl border border-slate-700 shadow-inner bg-slate-950 z-10"></div>
+          </div>
+        </div>
+
+        <div class="px-6 py-4 border-t border-slate-800 bg-slate-950/60 flex justify-end gap-3 shrink-0">
+          <button (click)="cerrarModal()" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white">Cancelar</button>
+          <button (click)="guardarZona()" class="px-6 py-2.5 rounded-xl text-sm font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/30">
+            {{ editandoId() ? 'Actualizar' : 'Guardar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

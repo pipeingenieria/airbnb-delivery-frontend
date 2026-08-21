@@ -1,0 +1,595 @@
+<style>
+  .leaflet-popup-content-wrapper { padding: 0 !important; border-radius: 10px !important; overflow: hidden !important; background: transparent !important; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important; }
+  .leaflet-popup-content { margin: 0 !important; width: 140px !important; }
+  .leaflet-popup-tip { background: #1e293b !important; }
+
+  @keyframes toastPremiumSpring {
+    0% { opacity: 0; transform: translate(-50%, -20px) scale(0.9); }
+    100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  }
+  .animate-toast-premium { animation: toastPremiumSpring 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+  @keyframes unitPopIn {
+    0% { opacity: 0; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  .animate-unit-enter { animation: unitPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+  @keyframes unitCollapse {
+    0% { opacity: 1; transform: scale(1); max-height: 60px; margin-bottom: 8px; }
+    100% { opacity: 0; transform: scale(0.9); max-height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; border-width: 0; }
+  }
+  .animate-unit-exit { animation: unitCollapse 0.35s ease-out forwards; overflow: hidden; }
+
+  @keyframes unitHighlight {
+    0% { background-color: rgba(99, 102, 241, 0.3); border-color: rgba(99, 102, 241, 0.8); box-shadow: 0 0 15px rgba(99, 102, 241, 0.3); }
+    100% { background-color: rgba(30, 41, 59, 0.4); border-color: rgba(51, 65, 85, 0.6); box-shadow: none; }
+  }
+  .animate-unit-highlight { animation: unitHighlight 2s ease-out forwards; }
+
+
+  @keyframes scaleBounceCelebration {
+    0% { transform: scale(0.8); opacity: 0; }
+    50% { transform: scale(1.03); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .animate-scale-bounce { animation: scaleBounceCelebration 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+  
+  @keyframes fadeInBlur {
+    0% { opacity: 0; backdrop-filter: blur(0px); }
+    100% { opacity: 1; backdrop-filter: blur(5px); }
+  }
+  .animate-fade-in-blur { animation: fadeInBlur 0.4s ease-out forwards; }
+</style>
+
+<div class="space-y-4 lg:space-y-6 flex flex-col w-full animate-entrance pb-6 lg:pb-0">
+  
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-start gap-4 lg:gap-10 shrink-0">
+    <div>
+      <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Centro de Propiedades</h2>
+      <p class="text-xs sm:text-sm text-slate-400 mt-1">Gestiona ubicaciones de entrega (Aptos y Edificios).</p>
+    </div>
+
+    <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+      <div class="relative w-full sm:w-72 lg:w-80">
+        <input type="text" [(ngModel)]="busquedaDireccion" (keyup.enter)="buscarEnMapa()" placeholder="Buscar barrio o dirección..." class="w-full pl-10 pr-16 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-400 text-sm focus:outline-none focus:border-blue-500 shadow-md">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </div>
+        <button (click)="buscarEnMapa()" title="Centrar en el mapa" class="absolute inset-y-1.5 right-1.5 px-3 bg-blue-600 hover:bg-blue-500 rounded-lg text-white text-[10px] font-bold uppercase tracking-wider transition-colors">Volar</button>
+      </div>
+
+      <button (click)="abrirModalCrear()" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-600/30 hover:from-blue-500 hover:to-blue-400 hover:shadow-xl hover:shadow-blue-500/60 hover:brightness-110 active:scale-95 active:brightness-125 border border-blue-400/30 shrink-0 transition-all duration-300">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+        Nueva Propiedad
+      </button>
+    </div>
+  </div>
+
+  <div class="w-full flex flex-col lg:flex-row gap-6 h-[65vh] lg:h-[calc(100vh-220px)]">
+    
+    <div class="w-full lg:flex-1 h-[60vh] lg:h-full relative rounded-3xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900 shrink-0">
+      <div class="absolute top-4 left-4 z-[400] pointer-events-none">
+        <div class="px-4 py-2.5 rounded-2xl bg-slate-950/90 backdrop-blur-md border border-slate-800 text-xs font-bold text-white shadow-lg flex items-center gap-2.5">
+          <span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500 shadow-[0_0_8px_#3b82f6]"></span></span>
+          <span>{{ propiedadesActivasCount() }} Propiedades Activas</span>
+        </div>
+      </div>
+      <div id="propiedades-map" class="absolute inset-0 z-10"></div>
+    </div>
+
+    <div class="w-full lg:w-[400px] shrink-0 bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-5 flex flex-col shadow-xl h-[50vh] lg:h-full">
+      <div class="flex justify-between items-center mb-4 px-1 shrink-0">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">Directorio</h3>
+        <span class="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-xs font-bold">{{ gruposFiltrados().length }} Grupos</span>
+      </div>
+
+      <div class="mb-4 flex gap-2 shrink-0 relative">
+        <div class="relative w-full">
+          <input type="text" [ngModel]="filtroLista()" (input)="actualizarFiltroLista($event)" placeholder="Filtrar por nombre, dirección, anfitrión..." class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-950/80 border border-slate-700 text-white text-sm focus:border-indigo-500 focus:outline-none transition-colors shadow-inner">
+          <svg class="w-4 h-4 text-slate-500 absolute left-3 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </div>
+        <select [ngModel]="filtroEstado()" (ngModelChange)="filtroEstado.set($event); paginaActual.set(1)" class="px-3 py-2.5 rounded-xl bg-slate-950/80 border border-slate-700 text-slate-300 text-sm focus:outline-none focus:border-indigo-500 cursor-pointer shadow-inner shrink-0 appearance-none font-medium">
+          <option value="todos">Todos</option>
+          <option value="activos">Activos</option>
+          <option value="inactivos">Inactivos</option>
+          <option value="falta_contacto">⚠️ Falta Contacto</option>
+        </select>
+      </div>
+      
+      <div class="flex-1 overflow-y-auto space-y-3 pr-1">
+        @if (cargando()) {
+          @for (i of [1, 2, 3]; track i) { <div class="h-24 rounded-2xl bg-slate-800/50 animate-pulse"></div> }
+        } @else if (gruposFiltrados().length === 0) {
+          <div class="text-center py-10 text-slate-500 text-sm bg-slate-950/40 rounded-2xl border border-slate-800 border-dashed">Sin coincidencias.</div>
+        } @else {
+          @for (grupo of gruposPaginados(); track grupo.id) {
+            
+            <div class="group p-4 rounded-2xl bg-slate-900/60 border hover:bg-slate-800/80 transition-all flex flex-col gap-3 relative overflow-hidden"
+                 [ngClass]="{
+                    'border-amber-500/50 bg-amber-500/5 shadow-[0_0_15px_rgba(245,158,11,0.05)]': grupo.faltaContacto,
+                    'border-slate-700/50 hover:border-blue-500/50': !grupo.faltaContacto && grupo.activo,
+                    'opacity-60 grayscale border-slate-700/50': !grupo.faltaContacto && !grupo.activo
+                 }">
+               <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b" 
+                    [ngClass]="grupo.faltaContacto ? 'from-amber-400 to-amber-600' : (grupo.esEdificio ? 'from-indigo-500 to-purple-600' : 'from-blue-500 to-cyan-500')"></div>
+               
+               <div class="flex justify-between items-start pl-2">
+                 <div class="flex items-center gap-3 w-[70%]">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shrink-0 border" 
+                         [ngClass]="grupo.faltaContacto ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' : (grupo.esEdificio ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/20' : 'bg-blue-500/20 text-blue-400 border-blue-500/20')">
+                       @if (grupo.faltaContacto) {
+                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                       } @else if (grupo.esEdificio) {
+                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                       } @else {
+                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                       }
+                    </div>
+                    <div class="min-w-0 flex-1">
+                       <h4 class="font-bold text-[13px] truncate flex items-center gap-2" [ngClass]="grupo.faltaContacto ? 'text-amber-400' : 'text-white'">
+                         {{ grupo.nombrePrincipal }}
+                       </h4>
+                       <p class="text-[10px] text-slate-400 leading-tight truncate mt-0.5">
+                         {{ grupo.faltaContacto ? '⚠️ Requiere atención (Faltan Datos)' : grupo.direccionBase }}
+                       </p>
+                    </div>
+                 </div>
+                 
+                 <!-- ACCIONES GRUPO (LIMPIAS Y DIRECTAS) -->
+                 <div class="flex gap-0.5 shrink-0">
+                    
+                    @if (!grupo.esEdificio) {
+                      <button (click)="abrirPortalDirecto(grupo.propiedades[0].qr_access_token, $event)" 
+                              (mouseenter)="mostrarTooltip($event, 'Abrir Portal Huésped')" 
+                              (mouseleave)="ocultarTooltip()" 
+                              class="p-1.5 text-slate-500 hover:text-cyan-400 hover:bg-cyan-500/10 rounded-lg transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                      </button>
+                    }
+
+                    @if (!grupo.esEdificio) {
+                      <button (click)="abrirContactoDesdeDirectorio(grupo.propiedades[0], $event)" 
+                              (mouseenter)="mostrarTooltip($event, 'Gestionar Anfitrión')" 
+                              (mouseleave)="ocultarTooltip()" 
+                              class="p-1.5 text-slate-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                      </button>
+                    }
+                    
+                    <button (click)="abrirEditorGrupo(grupo.propiedades, $event)" 
+                            (mouseenter)="mostrarTooltip($event, 'Editar Detalles')" 
+                            (mouseleave)="ocultarTooltip()" 
+                            class="p-1.5 text-slate-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-all">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    </button>
+                    
+                    <button (click)="eliminarGrupo(grupo, $event)" 
+                            (mouseenter)="mostrarTooltip($event, 'Eliminar Grupo')" 
+                            (mouseleave)="ocultarTooltip()" 
+                            class="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                  </div>
+               </div>
+    
+               @if (grupo.esEdificio) {
+                  <div class="mt-1 pl-2 pr-1">
+                     <button (click)="toggleEdificio(grupo.id, $event)" class="w-full flex items-center justify-between bg-slate-950/40 hover:bg-slate-900/80 border border-slate-700/50 rounded-lg px-2.5 py-1.5 transition-colors focus:outline-none">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+                           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                           {{ grupo.propiedades.length }} Apartamentos
+                        </span>
+                        <svg class="w-4 h-4 text-slate-500 transition-transform duration-300" [ngClass]="{'rotate-180': edificiosExpandidos()[grupo.id]}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                     </button>
+                     
+                     <div class="overflow-hidden transition-all duration-300 ease-in-out" [ngClass]="edificiosExpandidos()[grupo.id] ? 'max-h-64 opacity-100 mt-2' : 'max-h-0 opacity-0'">
+                        <div class="flex flex-col gap-1.5 pr-1 overflow-y-auto max-h-60 custom-scrollbar">
+                           @for (p of grupo.propiedades; track p.id) {
+                              <div (dblclick)="abrirContactoDesdeDirectorio(p, $event)"
+                                   class="flex items-center justify-between border rounded-lg pl-3 pr-1 py-1.5 group/apto hover:bg-slate-700/60 transition-colors cursor-pointer"
+                                   [ngClass]="{
+                                      'opacity-50 line-through bg-slate-800/40 border-slate-700/50': !p.activo && p.airbnb_nombre && p.airbnb_correo,
+                                      'bg-amber-500/10 border-amber-500/40': !p.airbnb_nombre || !p.airbnb_correo,
+                                      'bg-slate-800/40 border-slate-700/50': p.activo && p.airbnb_nombre && p.airbnb_correo
+                                   }">
+                                 
+                                 <div class="flex items-center gap-2 overflow-hidden w-full" (click)="abrirContactoDesdeDirectorio(p, $event)">
+                                   @if (!p.airbnb_nombre || !p.airbnb_correo) {
+                                     <svg class="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                   }
+                                   <span class="text-[10px] sm:text-[11px] font-medium break-words whitespace-normal pr-2 leading-tight" [ngClass]="!p.airbnb_nombre || !p.airbnb_correo ? 'text-amber-400' : 'text-slate-300'">
+                                     {{ p.nombre }}
+                                   </span>
+                                 </div>
+
+                                 <!-- ACCIONES APTO (LIMPIAS) -->
+                                 <div class="flex items-center gap-1 shrink-0">
+                                    <button (click)="abrirPortalDirecto(p.qr_access_token, $event)" 
+                                            data-tooltip="Abrir Portal Huésped" 
+                                            class="p-1.5 text-slate-500 hover:text-cyan-400 bg-slate-950/50 hover:bg-cyan-500/10 rounded-md transition-all shrink-0 opacity-100 sm:opacity-0 group-hover/apto:opacity-100">
+                                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                    </button>
+
+                                    <button (click)="abrirContactoDesdeDirectorio(p, $event)" data-tooltip="Gestionar Anfitrión" class="p-1.5 text-slate-400 hover:text-indigo-400 bg-slate-900/60 hover:bg-indigo-500/10 rounded-md transition-all">
+                                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                    </button>
+                                 </div>
+                              </div>
+                           }
+                        </div>
+                     </div>
+                  </div>
+               }
+               
+               <button (click)="centrarEnPropiedad(grupo)" class="w-full mt-1 py-1.5 rounded-lg bg-slate-800/40 hover:bg-slate-700 text-[11px] font-semibold text-slate-300 border border-slate-700/50 transition-colors">
+                 Volar al punto
+               </button>
+            </div>
+          }
+        }
+      </div>
+
+      @if (totalPaginas() > 1) {
+        <div class="mt-4 pt-4 border-t border-slate-800 flex justify-between items-center shrink-0">
+          <button (click)="paginaAnterior()" [disabled]="paginaActual() === 1" class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white disabled:opacity-30 transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path></svg>
+          </button>
+          <span class="text-xs font-bold text-slate-400 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">{{ paginaActual() }} / {{ totalPaginas() }}</span>
+          <button (click)="paginaSiguiente()" [disabled]="paginaActual() === totalPaginas()" class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white disabled:opacity-30 transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (modalAbierto()) {
+    <div class="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm animate-entrance">
+      
+      @if (toastMessage()) {
+        <div class="absolute top-6 left-1/2 -translate-x-1/2 z-[800] animate-toast-premium pointer-events-none w-[90%] max-w-md">
+          <div class="px-5 py-3 rounded-2xl shadow-[0_0_25px_rgba(99,102,241,0.3)] border border-indigo-500/50 bg-slate-900/95 text-white text-[13px] font-semibold flex items-start gap-3 backdrop-blur-xl">
+            <div class="flex items-center justify-center w-7 h-7 rounded-full bg-indigo-500/20 shrink-0 mt-0.5">
+              <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <span class="whitespace-normal break-words leading-tight flex-1 pt-1">{{ toastMessage() }}</span>
+          </div>
+        </div>
+      }
+
+      <div class="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
+        
+        <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/60 shrink-0">
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+            {{ editandoId() ? (esEdificio() ? 'Gestionar Edificio' : 'Editar Propiedad') : 'Ubicación Logística' }}
+          </h3>
+          <button (click)="cerrarModal()" class="text-slate-400 hover:text-white p-1 bg-slate-800 hover:bg-rose-500 rounded-lg transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+        
+        <div class="p-6 overflow-y-auto space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <div class="space-y-5">
+              @if (!editandoId()) {
+                <div class="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+                  <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Modo Creación:</span>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" [ngModel]="esEdificio()" (ngModelChange)="esEdificio.set($event)" class="sr-only peer">
+                    <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                    <span class="ml-3 text-sm font-bold text-white">{{ esEdificio() ? 'Edificio' : 'Unidad' }}</span>
+                  </label>
+                </div>
+              }
+
+              <div class="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800 mt-2">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Estado Operativo {{ esEdificio() ? 'Lote/Edificio' : 'Propiedad' }}</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" [ngModel]="nuevaPropiedad().activo" (ngModelChange)="toggleEstadoMaestro($event)" class="sr-only peer">
+                  <div class="w-10 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                  <span class="ml-3 text-xs font-bold" [ngClass]="nuevaPropiedad().activo ? 'text-emerald-400' : 'text-slate-500'">{{ nuevaPropiedad().activo ? 'Activa' : 'Inactiva' }}</span>
+                </label>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">{{ esEdificio() ? 'Nombre del Edificio / Conjunto' : 'Nombre Referencia (Ej: Apto Juan)' }} <span class="text-rose-500">*</span></label>
+                <input type="text" [(ngModel)]="nuevaPropiedad().nombre" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:outline-none focus:border-blue-500 shadow-inner">
+              </div>
+
+              @if (!esDireccionValida() && (nuevaPropiedad().direccion_apto?.length || 0) > 0) {
+                <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-3 animate-entrance">
+                  <svg class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                  <p class="text-[11px] text-amber-200 leading-tight">
+                    <strong class="block mb-0.5">Dirección Incompleta</strong>
+                    Para garantizar entregas efectivas, añade la nomenclatura exacta.
+                  </p>
+                </div>
+              }
+
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Dirección Base / Exacta <span class="text-rose-500">*</span></label>
+                <div class="flex gap-2">
+                  <input type="text" [(ngModel)]="nuevaPropiedad().direccion_apto" (keyup.enter)="buscarDireccionModal()" placeholder="Ej: Calle 100 #20-15..." class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-emerald-500/50 text-emerald-400 text-sm focus:outline-none focus:border-emerald-500 shadow-inner transition-colors">
+                  <button (click)="buscarDireccionModal()" class="px-4 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-white text-xs font-bold shadow-lg shrink-0 transition-colors">Buscar</button>
+                </div>
+              </div>
+
+              @if (esEdificio()) {
+                <div class="bg-slate-900/40 p-5 rounded-2xl border border-slate-700/40 shadow-inner animate-entrance">
+                  <div class="flex justify-between items-center mb-4 px-1">
+                    <label class="block text-[11px] font-bold uppercase tracking-widest text-indigo-400">
+                      Apartamentos <span class="text-rose-500">*</span>
+                    </label>
+                    <span class="px-2.5 py-1 rounded-md bg-indigo-500/10 text-indigo-300 text-[10px] font-bold border border-indigo-500/20 shadow-sm">{{ listaAptos().length }} Registradas</span>
+                  </div>
+
+                  <div class="relative group mb-5">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <svg class="w-4 h-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    </div>
+                    <input type="text" [(ngModel)]="aptoInput" (keydown.enter)="agregarApto($event)" (keydown.comma)="agregarApto($event)" placeholder="Ej: 101, 102... (Presiona Enter)" class="w-full pl-10 pr-16 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 shadow-inner transition-all placeholder:text-slate-500">
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                       <kbd class="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-[9px] font-bold text-slate-400 bg-slate-800 rounded border border-slate-700 uppercase tracking-wider">Enter ↵</kbd>
+                    </div>
+                  </div>
+                  
+                  @if (listaAptos().length === 0) {
+                    <div class="flex flex-col items-center justify-center py-8 border border-dashed border-slate-700/60 rounded-xl bg-slate-950/20">
+                      <div class="w-10 h-10 rounded-full bg-slate-800/50 flex items-center justify-center mb-3">
+                        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                      </div>
+                      <p class="text-[11px] text-slate-400 font-medium">No hay unidades agregadas.</p>
+                      <p class="text-[10px] text-slate-500 mt-1">Escribe arriba y presiona Enter.</p>
+                    </div>
+                  } @else {
+                    
+                    <div class="mt-4 flex flex-col gap-2 max-h-64 overflow-y-auto pr-1 custom-scrollbar scroll-smooth cursor-pointer">
+                      @for (aptoObj of listaAptos(); track aptoObj.nomenclatura) {
+                        <div [id]="'apto-row-' + aptoObj.nomenclatura" 
+                             (dblclick)="abrirModalContactoApto(aptoObj.nomenclatura, $event)"
+                             class="relative flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all duration-300 group/unit hover:-translate-y-0.5 hover:shadow-lg"
+                             [ngClass]="{
+                                'animate-unit-exit': aptosEliminando().includes(aptoObj.nomenclatura),
+                                'animate-unit-enter': !aptosEliminando().includes(aptoObj.nomenclatura),
+                                'animate-unit-highlight': ultimoAptoAgregado() === aptoObj.nomenclatura,
+                                'bg-slate-800/40 border-slate-700/60 hover:bg-slate-800/80 hover:border-slate-600': ultimoAptoAgregado() !== aptoObj.nomenclatura && aptoObj.airbnb_nombre && aptoObj.airbnb_correo,
+                                'bg-amber-500/10 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.15)]': (!aptoObj.airbnb_nombre || !aptoObj.airbnb_correo) && ultimoAptoAgregado() !== aptoObj.nomenclatura,
+                                'opacity-50 grayscale': !aptoObj.activo && aptoObj.airbnb_nombre && aptoObj.airbnb_correo
+                             }">
+                          
+                          <div class="flex items-center gap-3 flex-1 min-w-0 pr-2 overflow-hidden" (click)="abrirModalContactoApto(aptoObj.nomenclatura, $event)">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors"
+                                 [ngClass]="ultimoAptoAgregado() === aptoObj.nomenclatura ? 'bg-indigo-500/20 text-indigo-400' : (!aptoObj.airbnb_nombre || !aptoObj.airbnb_correo ? 'bg-amber-500/20 text-amber-500' : (aptoObj.activo ? 'bg-slate-900/80 text-slate-400 border border-slate-800' : 'bg-red-500/10 text-red-400 border border-red-500/20'))">
+                              @if (!aptoObj.airbnb_nombre || !aptoObj.airbnb_correo) {
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                              } @else {
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                              }
+                            </div>
+                            
+                            <div class="flex-1 min-w-0">
+                              <span class="text-[9px] font-bold uppercase tracking-widest mb-0.5 block" [ngClass]="(!aptoObj.airbnb_nombre || !aptoObj.airbnb_correo) ? 'text-amber-500' : 'text-slate-500'">
+                                {{ (!aptoObj.airbnb_nombre || !aptoObj.airbnb_correo) ? '⚠️ Falta Contacto' : 'Apartamento' }}
+                              </span>
+                              <span class="text-[11px] sm:text-[13px] font-bold block w-full whitespace-normal break-words leading-tight pr-1" [ngClass]="aptoObj.activo ? 'text-slate-200' : 'text-slate-500 line-through'">{{ aptoObj.nomenclatura }}</span>
+                            </div>
+                          </div>
+                          
+                          <div class="flex items-center gap-1 shrink-0">
+                            <button (click)="abrirModalContactoApto(aptoObj.nomenclatura, $event)" 
+                                    (mouseenter)="mostrarTooltip($event, 'Editar Contacto Anfitrión')" 
+                                    (mouseleave)="ocultarTooltip()" 
+                                    class="p-1.5 text-slate-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-all focus:opacity-100 shrink-0">
+                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                            </button>
+                            
+                            <button (click)="toggleAptoEstado(aptoObj.nomenclatura, $event)" 
+                                    (mouseenter)="mostrarTooltip($event, 'Pausar o Activar Operación')" 
+                                    (mouseleave)="ocultarTooltip()" 
+                                    class="p-1.5 text-slate-500 hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition-all focus:opacity-100 shrink-0">
+                              @if (aptoObj.activo) {
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                              } @else {
+                                <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"></path></svg>
+                              }
+                            </button>
+                            
+                            <button (click)="removerApto(aptoObj.nomenclatura)" 
+                                    (mouseenter)="mostrarTooltip($event, 'Eliminar Apartamento')" 
+                                    (mouseleave)="ocultarTooltip()" 
+                                    class="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all opacity-100 sm:opacity-0 group-hover/unit:opacity-100 focus:opacity-100 shrink-0">
+                              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              } @else {
+                <div class="bg-slate-900/40 p-5 rounded-2xl border shadow-inner animate-entrance transition-all"
+                     [ngClass]="{
+                        'border-amber-500/50 bg-amber-500/5': !nuevaPropiedad().airbnb_nombre || !nuevaPropiedad().airbnb_correo,
+                        'border-slate-700/40': nuevaPropiedad().airbnb_nombre && nuevaPropiedad().airbnb_correo
+                     }">
+                  <div class="flex justify-between items-center mb-3 px-1">
+                    <label class="block text-[11px] font-bold uppercase tracking-widest" [ngClass]="!nuevaPropiedad().airbnb_nombre || !nuevaPropiedad().airbnb_correo ? 'text-amber-400' : 'text-indigo-400'">
+                      {{ (!nuevaPropiedad().airbnb_nombre || !nuevaPropiedad().airbnb_correo) ? '⚠️ Falta Contacto de Anfitrión' : '✓ Contacto de Anfitrión Configurado' }}
+                    </label>
+                  </div>
+
+                  <button type="button" 
+                          (click)="abrirModalContactoIndiv($event)"
+                          class="w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all duration-300 shadow-sm"
+                          [ngClass]="{
+                             'bg-amber-500/10 border-amber-500/50 text-amber-300 hover:bg-amber-500/20': !nuevaPropiedad().airbnb_nombre || !nuevaPropiedad().airbnb_correo,
+                             'bg-slate-800/60 border-slate-700 text-slate-200 hover:bg-slate-800': nuevaPropiedad().airbnb_nombre && nuevaPropiedad().airbnb_correo
+                          }">
+                     <div class="flex items-center gap-3 truncate">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border"
+                             [ngClass]="(!nuevaPropiedad().airbnb_nombre || !nuevaPropiedad().airbnb_correo) ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'">
+                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                        </div>
+                        <div class="flex flex-col text-left truncate">
+                           <span class="text-[12px] font-bold truncate">{{ nuevaPropiedad().airbnb_nombre || 'Hacer clic para registrar anfitrión...' }}</span>
+                           <span class="text-[10px] opacity-75 truncate">{{ nuevaPropiedad().airbnb_correo || 'Teléfono y correo pendientes' }}</span>
+                        </div>
+                     </div>
+                     <span class="text-[11px] font-bold underline uppercase tracking-wider shrink-0 ml-2">Gestionar</span>
+                  </button>
+                </div>
+              }
+            </div>
+
+            <div class="space-y-5">
+              <div class="relative w-full h-32 rounded-xl border-2 border-dashed border-slate-700 hover:border-blue-500/50 bg-slate-950/50 flex flex-col items-center justify-center cursor-pointer overflow-hidden group transition-all" [ngClass]="{'opacity-75 pointer-events-none border-indigo-500/50': subiendoImagen()}">
+                <input type="file" (change)="onImagenSeleccionada($event)" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-20" [disabled]="subiendoImagen()">
+                
+                @if (subiendoImagen()) {
+                  <div class="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm">
+                     <svg class="w-8 h-8 text-indigo-500 animate-spin mb-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                     <span class="text-[10px] font-bold uppercase tracking-widest text-indigo-400 animate-pulse">Subiendo a Cloudinary...</span>
+                  </div>
+                }
+
+                @if (imagenPreview()) {
+                  <img [src]="imagenPreview()" class="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:opacity-40 transition-opacity">
+                  @if (!subiendoImagen()) {
+                    <div class="z-10 text-white flex flex-col items-center drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
+                      <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                      <span class="text-xs font-bold mt-1">Cambiar Fotografía</span>
+                    </div>
+                  }
+                } @else {
+                  <div class="z-10 text-slate-400 flex flex-col items-center group-hover:text-blue-400 transition-colors">
+                    <svg class="w-7 h-7 mb-1.5 text-slate-500 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <span class="text-xs font-bold uppercase tracking-wider">Subir Fotografía (Opcional)</span>
+                  </div>
+                }
+              </div>
+
+              <div class="bg-slate-950/80 border border-slate-800 p-3 rounded-xl shadow-inner">
+                <h4 class="text-xs font-bold uppercase text-slate-400 mb-2 flex items-center gap-2">
+                  <svg class="w-4 h-4 text-emerald-500 animate-spin-slow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                  Radar de Geocercas (Zonas) <span class="text-rose-500">*</span>
+                </h4>
+                <div class="flex flex-wrap gap-2 min-h-[26px]">
+                  @if (zonasQueCubren().length === 0) {
+                    <span class="text-[10px] text-rose-400 font-semibold bg-rose-500/10 px-2 py-1 rounded-full border border-rose-500/20">Fuera de Cobertura (Mueve el Pin)</span>
+                  } @else {
+                    @for (zona of zonasQueCubren(); track zona.id) {
+                      <span class="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-1 rounded-full border border-emerald-500/30 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> {{ zona.nombre }}
+                      </span>
+                    }
+                  }
+                </div>
+              </div>
+
+              <div>
+                <div id="minimap" class="w-full h-[220px] rounded-xl border border-slate-700 shadow-inner bg-slate-950 z-10"></div>
+                <p class="text-[10px] text-center text-slate-500 mt-2 font-medium leading-tight">Arrastra el pin azul para autocompletar la dirección y validar la cobertura.</p>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="px-6 py-4 border-t border-slate-800 bg-slate-950/60 flex justify-end gap-3 shrink-0">
+          <button (click)="cerrarModal()" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white transition-colors">Cancelar</button>
+          <button (click)="guardarDatos()" [disabled]="!formularioValido()" class="px-8 py-2.5 rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+            {{ editandoId() ? (esEdificio() ? 'Actualizar Edificio Completo' : 'Actualizar Propiedad') : (esEdificio() ? 'Crear Todo el Edificio' : 'Guardar Propiedad') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL SECUNDARIO: DATOS DE CONTACTO (AIRBNB) -->
+  @if (modalContactoAbierto() && aptoEnContacto()) {
+    <div class="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-md animate-entrance">
+      <div class="w-full max-w-md bg-slate-900 border border-slate-700 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col">
+        
+        <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/80">
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <div class="p-1.5 bg-indigo-500/20 rounded-lg text-indigo-400">
+               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+            </div>
+            Contacto Anfitrión - {{ aptoEnContacto()?.nomenclatura }}
+          </h3>
+          <button (click)="cerrarModalContacto()" class="text-slate-400 hover:text-rose-400 transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+        
+        <div class="p-6 space-y-4 bg-slate-900/50">
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Nombre y Apellidos <span class="text-rose-500">*</span></label>
+            <input type="text" [(ngModel)]="aptoEnContacto()!.airbnb_nombre" placeholder="Ej: Maria Gonzalez" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:outline-none focus:border-indigo-500 shadow-inner transition-colors">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Teléfono / Celular <span class="text-rose-500">*</span></label>
+            <input type="text" [(ngModel)]="aptoEnContacto()!.airbnb_telefono" placeholder="Ej: +57 300 000 0000" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:outline-none focus:border-indigo-500 shadow-inner transition-colors">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Correo Electrónico <span class="text-rose-500">*</span></label>
+            <input type="email" [(ngModel)]="aptoEnContacto()!.airbnb_correo" placeholder="Ej: maria@airbnb.com" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:outline-none focus:border-indigo-500 shadow-inner transition-colors">
+          </div>
+        </div>
+        
+        <div class="px-6 py-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between">
+          <div class="flex-1 flex gap-4 items-center">
+             <!-- BOTONES DE ACCIONES SECUNDARIAS REORGANIZADOS -->
+             @if (aptoEnContacto()!.airbnb_correo && aptoEnContacto()!.activo) {
+               <button (click)="notificarContacto($event)" data-tooltip="Reenviar Acceso" class="text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg> 
+                  <span class="hidden sm:block">Reenviar</span>
+               </button>
+             }
+             @if (aptoEnContacto()!.qr_access_token) {
+               <button (click)="descargarQRDesdeModal($event)" data-tooltip="Descargar QR" class="text-emerald-400 hover:text-emerald-300 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg> 
+                  <span class="hidden sm:block">QR</span>
+               </button>
+             }
+          </div>
+          <div class="flex items-center gap-3">
+             <button (click)="cerrarModalContacto()" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white transition-colors">Cancelar</button>
+             <button (click)="guardarContacto()" class="px-6 py-2.5 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg transition-all shadow-indigo-500/30">
+               Guardar
+             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (showCelebration()) {
+    <div class="fixed inset-0 z-[1000] flex items-center justify-center pointer-events-none">
+      <div class="absolute inset-0 bg-slate-950/60 animate-fade-in-blur"></div>
+      
+      <div class="relative bg-gradient-to-br from-indigo-500 via-purple-600 to-blue-500 p-[2px] rounded-3xl shadow-[0_0_80px_rgba(99,102,241,0.5)] animate-scale-bounce">
+        <div class="bg-slate-900 rounded-[22px] px-8 py-10 flex flex-col items-center text-center max-w-sm">
+           
+           <div class="w-24 h-24 bg-indigo-500/10 rounded-full flex items-center justify-center mb-6 relative">
+              <div class="absolute inset-0 rounded-full border-4 border-indigo-500/30 animate-ping"></div>
+              <div class="absolute inset-2 rounded-full border border-indigo-400/50 rotate-45"></div>
+              <span class="text-5xl drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">🚀</span>
+           </div>
+           
+           <h2 class="text-2xl font-extrabold text-white mb-2 tracking-tight">¡Nuevo Aliado a Bordo!</h2>
+           <p class="text-indigo-200 text-sm leading-relaxed mb-1">
+             El apartamento ha sido activado oficialmente en la red logística.
+           </p>
+           <p class="text-slate-400 text-[10px] uppercase tracking-wider font-bold mt-4 border-t border-slate-800 pt-3">
+             El código QR ha sido enviado
+           </p>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>
