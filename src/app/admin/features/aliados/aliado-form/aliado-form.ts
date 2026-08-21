@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { AdminService } from '../../../services/admin.service'; 
+import { forkJoin } from 'rxjs';
 
 export interface CatalogoItem {
   id?: number;
@@ -34,6 +35,12 @@ export class AliadoForm implements OnInit {
 
   aliadoInfo = signal<any>(null);
   catalogo = signal<CatalogoItem[]>([]);
+  
+  // SEÑALES NUEVAS PARA LÓGICA ESPACIAL Y SIMULACIÓN
+  propiedadesBD = signal<any[]>([]);
+  zonasBD = signal<any[]>([]);
+  modalSimulacionAbierto = signal<boolean>(false);
+  simulacionData = signal<any>(null);
 
   modalAbierto = signal<boolean>(false);
   modalSeccionesAbierto = signal<boolean>(false);
@@ -57,12 +64,8 @@ export class AliadoForm implements OnInit {
     disponible: true
   });
 
-  // ==============================================
-  // LÓGICA DE CONTEXTO INTELIGENTE (Restaurante vs General)
-  // ==============================================
   esRestaurante = computed(() => {
     const cat = this.aliadoInfo()?.categoria || '';
-    // Detecta si es un restaurante o similar
     return cat.toLowerCase().includes('restaurant') || cat.toLowerCase().includes('comida');
   });
 
@@ -96,6 +99,77 @@ export class AliadoForm implements OnInit {
     return nombreValido && precioValido && imagenValida && !this.subiendoImagen();
   });
 
+  // ==============================================
+  // MOTOR GEOLÓGICO: Cálculo Haversine en Frontend
+  // ==============================================
+  propiedadesCubiertas = computed(() => {
+    const aliado = this.aliadoInfo();
+    const zonas = this.zonasBD() || [];
+    const propiedades = this.propiedadesBD() || [];
+
+    if (!aliado || !zonas.length || !propiedades.length) return [];
+
+    const latA = Number(aliado.latitud);
+    const lngA = Number(aliado.longitud);
+
+    if (isNaN(latA) || isNaN(lngA)) return [];
+
+    // 1. ZONAS DEL NEGOCIO (Estrictamente Espacial)
+    // El aliado solo entra si sus coordenadas están físicamente dentro del radio de la zona.
+    const zonasDelAliado = zonas.filter(z => {
+      if (z.activo === false) return false;
+      
+      const latZ = Number(z.latitud);
+      const lngZ = Number(z.longitud);
+      const radio = Number(z.radio);
+
+      if (latZ && lngZ && radio) {
+        return this.haversine(latA, lngA, latZ, lngZ) <= radio;
+      }
+      return false;
+    });
+
+    if (zonasDelAliado.length === 0) return [];
+
+    // 2. AIRBNBS EN ALCANCE (Estrictamente Espacial)
+    // Listamos solo las propiedades que físicamente caen dentro de ESAS mismas zonas.
+    const propsEnAlcance = propiedades.filter(p => {
+      if (p.activo === false) return false;
+
+      const latP = Number(p.latitud);
+      const lngP = Number(p.longitud);
+      
+      if (!latP || !lngP) return false;
+
+      return zonasDelAliado.some(z => {
+        const latZ = Number(z.latitud);
+        const lngZ = Number(z.longitud);
+        return this.haversine(latP, lngP, latZ, lngZ) <= Number(z.radio);
+      });
+    });
+
+    // 3. ORDEN: De la más cerca a la más lejos
+    return propsEnAlcance.map(p => {
+      const latP = Number(p.latitud);
+      const lngP = Number(p.longitud);
+      return { 
+        ...p, 
+        distanciaMetros: Math.round(this.haversine(latA, lngA, latP, lngP)) 
+      };
+    }).sort((a, b) => a.distanciaMetros - b.distanciaMetros);
+  });
+
+  haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371000; 
+    const f1 = lat1 * Math.PI / 180;
+    const f2 = lat2 * Math.PI / 180;
+    const df = (lat2 - lat1) * Math.PI / 180;
+    const dl = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(df / 2) * Math.sin(df / 2) + Math.cos(f1) * Math.cos(f2) * Math.sin(dl / 2) * Math.sin(dl / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
   ngOnInit() {
     this.route.paramMap.subscribe(params => {
       const token = params.get('token');
@@ -116,19 +190,77 @@ export class AliadoForm implements OnInit {
     this.cargando.set(true);
     this.currentToken = token;
     
-    this.adminService.getPortalAliado(token).subscribe({
-      next: (res) => {
-        this.aliadoInfo.set(res.aliado);
-        this.catalogo.set(res.catalogo);
-        const secItems = res.catalogo.map((i: any) => i.seccion);
+    forkJoin({
+      portal: this.adminService.getPortalAliado(token),
+      props: this.adminService.getPropiedades(), 
+      zonas: this.adminService.getZonas(),
+      todosLosAliados: this.adminService.getAliados() 
+    }).subscribe({
+      next: (res: any) => {
+        // 🔍 CORRECCIÓN: Fusionamos los datos inteligentemente
+        const aliadoBasico = res.portal.aliado;
+        const aliadoRed = res.todosLosAliados.find((a: any) => a.id === aliadoBasico.id);
+        
+        // Conservamos los textos formateados (como .categoria) y solo sobreescribimos la data espacial
+        const aliadoFusionado = {
+          ...aliadoBasico, 
+          latitud: aliadoRed?.latitud || aliadoBasico.latitud,
+          longitud: aliadoRed?.longitud || aliadoBasico.longitud,
+          zona_id: aliadoRed?.zona_id || aliadoBasico.zona_id
+        };
+        
+        this.aliadoInfo.set(aliadoFusionado); 
+        
+        this.catalogo.set(res.portal.catalogo);
+        const secItems = res.portal.catalogo.map((i: any) => i.seccion);
         this.seccionesManuales.set(Array.from(new Set([this.seccionPorDefecto(), ...secItems])));
+        
+        this.propiedadesBD.set(res.props);
+        this.zonasBD.set(res.zonas);
+
         this.cargando.set(false);
       },
       error: () => {
-        this.errorToken.set(true);
+        this.errorToken.set(true); 
         this.cargando.set(false);
       }
     });
+  }
+
+  abrirSimulacion() {
+    const props = this.propiedadesCubiertas();
+    if (props.length === 0) {
+      this.showToast('⚠️ No tienes propiedades en tu radio de cobertura actual para simular.');
+      return;
+    }
+
+    const count = props.length;
+    // Simulamos un comportamiento realista (40% de las propiedades ordenando)
+    const ordenesDia = Math.max(1, Math.round(count * 0.4)); 
+    const ordenesMes = ordenesDia * 30;
+    const ordenesAno = ordenesMes * 12;
+    
+    const ticketPromedio = this.esRestaurante() ? 25 : 15; // Estimado USD
+
+    const recientes = [];
+    for(let i=0; i < Math.min(5, count); i++) {
+      recientes.push({
+        id: Math.floor(1000 + Math.random() * 9000),
+        propiedad: props[i].nombre,
+        monto: ticketPromedio + Math.floor(Math.random() * 20),
+        estado: ['Preparando', 'En Camino', 'Entregado'][Math.floor(Math.random() * 3)],
+        minutos: Math.floor(Math.random() * 50) + 2
+      });
+    }
+
+    this.simulacionData.set({
+      diario: { ordenes: ordenesDia, ingresos: ordenesDia * ticketPromedio },
+      mensual: { ordenes: ordenesMes, ingresos: ordenesMes * ticketPromedio },
+      anual: { ordenes: ordenesAno, ingresos: ordenesAno * ticketPromedio },
+      recientes: recientes.sort((a,b) => a.minutos - b.minutos)
+    });
+
+    this.modalSimulacionAbierto.set(true);
   }
 
   abrirModalSecciones() {

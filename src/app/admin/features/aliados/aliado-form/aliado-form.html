@@ -64,7 +64,6 @@
             @else { <span class="text-xl">🏪</span> }
           </div>
           <div>
-            <!-- AQUÍ ESTÁ EL BADGE DE CATEGORÍA ELEGANTE -->
             <div class="flex items-center gap-2 mb-1">
               <p class="text-[9px] font-bold uppercase tracking-widest" [ngClass]="isDarkMode() ? 'text-rose-400' : 'text-rose-600'">{{ esRestaurante() ? 'Constructor de Menú' : 'Gestor de Catálogo' }}</p>
               <span class="w-1 h-1 rounded-full bg-zinc-500 opacity-50"></span>
@@ -76,100 +75,159 @@
             <h1 class="text-lg font-extrabold truncate leading-tight" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">{{ aliadoInfo().nombre }}</h1>
           </div>
         </div>
+
+        <!-- BOTÓN SIMULADOR DEMANDA -->
+        <button (click)="abrirSimulacion()" class="hidden sm:flex px-4 py-2.5 rounded-xl text-xs font-bold border transition-colors items-center gap-2" 
+                [ngClass]="isDarkMode() ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20' : 'bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-100'">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+          Pedidos
+        </button>
       </div>
     </div>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-8 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 pb-24">
+    <!-- CONTENEDOR PRINCIPAL ACTUALIZADO -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-8 py-8 flex flex-col lg:grid lg:grid-cols-12 gap-10 lg:gap-12 pb-24">
       
-      <div class="lg:col-span-7 space-y-8 animate-entrance">
+      <!-- WRAPPER MÁGICO: En mobile se disuelve (contents) para permitir el reordenamiento, en desktop es un bloque normal -->
+      <div class="contents lg:block lg:col-span-7">
         
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h2 class="text-2xl font-bold tracking-tight" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">Gestión por {{ esRestaurante() ? 'Secciones' : 'Categorías' }}</h2>
-          <button (click)="abrirModalSecciones()" class="px-5 py-2.5 rounded-full text-xs font-bold border transition-colors flex items-center justify-center gap-2"
-                  [ngClass]="isDarkMode() ? 'bg-zinc-900 border-zinc-700 text-white hover:border-rose-500' : 'bg-white border-gray-300 text-gray-900 hover:border-rose-500 hover:bg-rose-50/50'">
-            <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-            Configurar {{ esRestaurante() ? 'Secciones' : 'Categorías' }}
-          </button>
+        <!-- ============================================== -->
+        <!-- PARTE 1: CATÁLOGO (Arriba en Mobile / Izquierda en Desktop) -->
+        <!-- ============================================== -->
+        <div class="order-1 w-full space-y-8 animate-entrance">
+          
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h2 class="text-2xl font-bold tracking-tight" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">Gestión por {{ esRestaurante() ? 'Secciones' : 'Categorías' }}</h2>
+            <button (click)="abrirModalSecciones()" class="px-5 py-2.5 rounded-full text-xs font-bold border transition-colors flex items-center justify-center gap-2"
+                    [ngClass]="isDarkMode() ? 'bg-zinc-900 border-zinc-700 text-white hover:border-rose-500' : 'bg-white border-gray-300 text-gray-900 hover:border-rose-500 hover:bg-rose-50/50'">
+              <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+              Configurar {{ esRestaurante() ? 'Secciones' : 'Categorías' }}
+            </button>
+          </div>
+
+          @if (catalogo().length === 0) {
+            <!-- TU ESTADO VACÍO (Empty State) AQUÍ -->
+            <div class="flex flex-col items-center justify-center py-16 border-2 border-dashed rounded-3xl transition-colors text-center px-4"
+                 [ngClass]="isDarkMode() ? 'border-zinc-800 bg-[#0B1120]' : 'border-gray-300 bg-gray-50'">
+              <div class="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mb-4 text-rose-500">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+              </div>
+              <h3 class="text-lg font-bold" [ngClass]="isDarkMode() ? 'text-zinc-200' : 'text-gray-800'">{{ esRestaurante() ? 'Empieza tu Carta' : 'Inicia tu Catálogo' }}</h3>
+              <p class="text-sm mt-2 max-w-sm" [ngClass]="isDarkMode() ? 'text-zinc-500' : 'text-gray-500'">{{ esRestaurante() ? 'Añade platos a tus secciones' : 'Añade productos a tus categorías' }} para que tus huéspedes puedan ordenar de inmediato.</p>
+              <button (click)="abrirModalCrear()" class="mt-6 px-6 py-2.5 rounded-full bg-rose-500 hover:bg-rose-400 text-white font-bold text-sm transition-all shadow-lg glow-rose">{{ esRestaurante() ? 'Crear el primer plato' : 'Añadir el primer producto' }}</button>
+            </div>
+          } @else {
+            <div class="space-y-6">
+              <!-- TU BUCLE @for (grupo of menuAgrupado()...) AQUÍ -->
+              @for (grupo of menuAgrupado(); track grupo.seccion) {
+                <div class="rounded-3xl border overflow-hidden transition-all shadow-sm" [ngClass]="isDarkMode() ? 'border-zinc-800 bg-[#111827]' : 'border-gray-200 bg-white'">
+                  
+                  <div class="px-6 py-4 border-b flex justify-between items-center" [ngClass]="isDarkMode() ? 'border-zinc-800 bg-[#0B1120]' : 'border-gray-100 bg-gray-50'">
+                    <h3 class="text-lg font-bold flex items-center gap-3" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">
+                      <span class="w-2 h-6 rounded-full bg-rose-500"></span>
+                      {{ grupo.seccion }}
+                    </h3>
+                    <button (click)="abrirModalCrear(grupo.seccion)" class="text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors flex items-center gap-1.5"
+                            [ngClass]="isDarkMode() ? 'bg-zinc-900 border-zinc-700 text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/50' : 'bg-white border-gray-200 text-rose-500 hover:bg-rose-50'">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg> 
+                      {{ esRestaurante() ? 'Añadir Plato' : 'Añadir Producto' }}
+                    </button>
+                  </div>
+                  
+                  <div class="divide-y" [ngClass]="isDarkMode() ? 'divide-zinc-800' : 'divide-gray-100'">
+                    @if (grupo.items.length === 0) {
+                      <div class="p-6 flex flex-col items-center justify-center text-center">
+                        <p class="text-sm font-medium mb-2" [ngClass]="isDarkMode() ? 'text-zinc-500' : 'text-gray-500'">Esta {{ esRestaurante() ? 'sección' : 'categoría' }} aún no tiene productos.</p>
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg border shadow-sm" 
+                             [ngClass]="isDarkMode() ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-600'">
+                          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                          <span class="text-[11px] font-bold tracking-wide">Añade un {{ esRestaurante() ? 'plato' : 'producto' }} o esta {{ esRestaurante() ? 'sección' : 'categoría' }} desaparecerá al salir.</span>
+                        </div>
+                      </div>
+                    }
+                    @for (item of grupo.items; track item.id) {
+                      <div class="p-4 flex items-center gap-4 group/item hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer" (click)="abrirModalEditar(item)">
+                        
+                        <div class="relative w-16 h-16 shrink-0 rounded-xl overflow-hidden border" [ngClass]="{'opacity-50 grayscale': !item.disponible}">
+                          <img [src]="item.imagen_url" class="w-full h-full object-cover">
+                        </div>
+  
+                        <div class="flex-1 min-w-0 pr-2">
+                          <div class="flex items-center gap-2">
+                            <h4 class="font-bold text-sm truncate" [ngClass]="isDarkMode() ? 'text-zinc-100' : 'text-gray-900'">{{ item.nombre }}</h4>
+                            @if (!item.disponible) { <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase rounded bg-zinc-500/20 text-zinc-400 border border-zinc-500/30">Oculto</span> }
+                          </div>
+                          <p class="text-xs mt-0.5 font-bold" [ngClass]="isDarkMode() ? 'text-rose-400' : 'text-rose-500'">{{ formatPrice(item.precio_base) }}</p>
+                        </div>
+  
+                        <div class="flex items-center gap-1.5 shrink-0 opacity-100 sm:opacity-0 group-hover/item:opacity-100 transition-opacity">
+                          <button (click)="toggleDisponibilidad(item, $event)" title="Ocultar / Publicar" class="p-2 rounded-lg transition-colors"
+                                  [ngClass]="isDarkMode() ? (item.disponible ? 'bg-zinc-800 text-zinc-400 hover:text-white' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20') : (item.disponible ? 'bg-gray-100 text-gray-500 hover:text-gray-900' : 'bg-emerald-50 text-emerald-600 border border-emerald-200')">
+                            @if (item.disponible) {
+                              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                            } @else {
+                              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/></svg>
+                            }
+                          </button>
+                          <button (click)="eliminarProducto(item.id!, $event)" title="Eliminar" class="p-2 rounded-lg transition-colors"
+                                  [ngClass]="isDarkMode() ? 'bg-zinc-800 text-rose-500 hover:bg-rose-500/20' : 'bg-gray-100 text-rose-500 hover:bg-rose-100'">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                          </button>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
         </div>
 
-        @if (catalogo().length === 0) {
-          <div class="flex flex-col items-center justify-center py-16 border-2 border-dashed rounded-3xl transition-colors text-center px-4"
-               [ngClass]="isDarkMode() ? 'border-zinc-800 bg-[#0B1120]' : 'border-gray-300 bg-gray-50'">
-            <div class="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mb-4 text-rose-500">
-              <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+        <!-- ============================================== -->
+        <!-- PARTE 3: RED LOGÍSTICA (Abajo en Mobile / Izquierda en Desktop) -->
+        <!-- ============================================== -->
+        <div class="order-3 w-full pt-8 border-t lg:mt-12 animate-entrance" [ngClass]="isDarkMode() ? 'border-zinc-800' : 'border-gray-200'">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h2 class="text-xl font-bold tracking-tight" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">Red Logística en Alcance</h2>
+              <p class="text-xs mt-1" [ngClass]="isDarkMode() ? 'text-zinc-500' : 'text-gray-500'">Propiedades Airbnb que pueden ver tu catálogo ahora mismo.</p>
             </div>
-            <h3 class="text-lg font-bold" [ngClass]="isDarkMode() ? 'text-zinc-200' : 'text-gray-800'">{{ esRestaurante() ? 'Empieza tu Carta' : 'Inicia tu Catálogo' }}</h3>
-            <p class="text-sm mt-2 max-w-sm" [ngClass]="isDarkMode() ? 'text-zinc-500' : 'text-gray-500'">{{ esRestaurante() ? 'Añade platos a tus secciones' : 'Añade productos a tus categorías' }} para que tus huéspedes puedan ordenar de inmediato.</p>
-            <button (click)="abrirModalCrear()" class="mt-6 px-6 py-2.5 rounded-full bg-rose-500 hover:bg-rose-400 text-white font-bold text-sm transition-all shadow-lg glow-rose">{{ esRestaurante() ? 'Crear el primer plato' : 'Añadir el primer producto' }}</button>
+            <div class="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              {{ propiedadesCubiertas().length }} Airbnbs
+            </div>
           </div>
-        } @else {
-          <div class="space-y-6">
-            @for (grupo of menuAgrupado(); track grupo.seccion) {
-              <div class="rounded-3xl border overflow-hidden transition-all shadow-sm" [ngClass]="isDarkMode() ? 'border-zinc-800 bg-[#111827]' : 'border-gray-200 bg-white'">
-                
-                <div class="px-6 py-4 border-b flex justify-between items-center" [ngClass]="isDarkMode() ? 'border-zinc-800 bg-[#0B1120]' : 'border-gray-100 bg-gray-50'">
-                  <h3 class="text-lg font-bold flex items-center gap-3" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">
-                    <span class="w-2 h-6 rounded-full bg-rose-500"></span>
-                    {{ grupo.seccion }}
-                  </h3>
-                  <button (click)="abrirModalCrear(grupo.seccion)" class="text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors flex items-center gap-1.5"
-                          [ngClass]="isDarkMode() ? 'bg-zinc-900 border-zinc-700 text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/50' : 'bg-white border-gray-200 text-rose-500 hover:bg-rose-50'">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg> 
-                    {{ esRestaurante() ? 'Añadir Plato' : 'Añadir Producto' }}
-                  </button>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            @for (prop of propiedadesCubiertas(); track prop.id) {
+              <div class="p-4 rounded-2xl border flex items-center gap-3 transition-colors" [ngClass]="isDarkMode() ? 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-700' : 'bg-white border-gray-200 hover:border-gray-300'">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0" [ngClass]="isDarkMode() ? 'bg-zinc-800 text-zinc-400' : 'bg-gray-100 text-gray-500'">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
                 </div>
-                
-                <div class="divide-y" [ngClass]="isDarkMode() ? 'divide-zinc-800' : 'divide-gray-100'">
-                  @if (grupo.items.length === 0) {
-                    <div class="p-6 flex flex-col items-center justify-center text-center">
-                      <p class="text-sm font-medium mb-2" [ngClass]="isDarkMode() ? 'text-zinc-500' : 'text-gray-500'">Esta {{ esRestaurante() ? 'sección' : 'categoría' }} aún no tiene productos.</p>
-                      <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg border shadow-sm" 
-                           [ngClass]="isDarkMode() ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-600'">
-                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                        <span class="text-[11px] font-bold tracking-wide">Añade un {{ esRestaurante() ? 'plato' : 'producto' }} o esta {{ esRestaurante() ? 'sección' : 'categoría' }} desaparecerá al salir.</span>
-                      </div>
-                    </div>
-                  }
-                  @for (item of grupo.items; track item.id) {
-                    <div class="p-4 flex items-center gap-4 group/item hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer" (click)="abrirModalEditar(item)">
-                      
-                      <div class="relative w-16 h-16 shrink-0 rounded-xl overflow-hidden border" [ngClass]="{'opacity-50 grayscale': !item.disponible}">
-                        <img [src]="item.imagen_url" class="w-full h-full object-cover">
-                      </div>
-
-                      <div class="flex-1 min-w-0 pr-2">
-                        <div class="flex items-center gap-2">
-                          <h4 class="font-bold text-sm truncate" [ngClass]="isDarkMode() ? 'text-zinc-100' : 'text-gray-900'">{{ item.nombre }}</h4>
-                          @if (!item.disponible) { <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase rounded bg-zinc-500/20 text-zinc-400 border border-zinc-500/30">Oculto</span> }
-                        </div>
-                        <p class="text-xs mt-0.5 font-bold" [ngClass]="isDarkMode() ? 'text-rose-400' : 'text-rose-500'">{{ formatPrice(item.precio_base) }}</p>
-                      </div>
-
-                      <div class="flex items-center gap-1.5 shrink-0 opacity-100 sm:opacity-0 group-hover/item:opacity-100 transition-opacity">
-                        <button (click)="toggleDisponibilidad(item, $event)" title="Ocultar / Publicar" class="p-2 rounded-lg transition-colors"
-                                [ngClass]="isDarkMode() ? (item.disponible ? 'bg-zinc-800 text-zinc-400 hover:text-white' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20') : (item.disponible ? 'bg-gray-100 text-gray-500 hover:text-gray-900' : 'bg-emerald-50 text-emerald-600 border border-emerald-200')">
-                          @if (item.disponible) {
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                          } @else {
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/></svg>
-                          }
-                        </button>
-                        <button (click)="eliminarProducto(item.id!, $event)" title="Eliminar" class="p-2 rounded-lg transition-colors"
-                                [ngClass]="isDarkMode() ? 'bg-zinc-800 text-rose-500 hover:bg-rose-500/20' : 'bg-gray-100 text-rose-500 hover:bg-rose-100'">
-                          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                        </button>
-                      </div>
-                    </div>
-                  }
+                <div class="flex-1 min-w-0">
+                  <h4 class="text-sm font-bold truncate" [ngClass]="isDarkMode() ? 'text-zinc-200' : 'text-gray-800'">{{ prop.nombre }}</h4>
+                  <p class="text-[10px] truncate mt-0.5" [ngClass]="isDarkMode() ? 'text-zinc-500' : 'text-gray-500'">{{ prop.direccion_apto }}</p>
+                </div>
+                <div class="text-right shrink-0">
+                  <span class="block text-xs font-bold text-emerald-500">{{ (prop.distanciaMetros / 1000).toFixed(1) }} km</span>
+                  <span class="text-[9px] uppercase tracking-wider" [ngClass]="isDarkMode() ? 'text-zinc-600' : 'text-gray-400'">Distancia</span>
                 </div>
               </div>
             }
+            @if (propiedadesCubiertas().length === 0) {
+              <div class="col-span-1 sm:col-span-2 p-6 text-center border border-dashed rounded-2xl" [ngClass]="isDarkMode() ? 'border-zinc-800 text-zinc-500' : 'border-gray-300 text-gray-500'">
+                No tienes propiedades activas en tu radio de cobertura logístico.
+              </div>
+            }
           </div>
-        }
+        </div>
+
       </div>
 
-      <!-- LADO DERECHO: VISTA PREVIA EN VIVO DE LA CARTA (COLUMNAS 8 a 12) -->
-      <div class="lg:col-span-5 relative mt-10 lg:mt-0 animate-entrance" style="animation-delay: 0.1s;">
+      <!-- ============================================== -->
+      <!-- PARTE 2: VISTA PREVIA (Medio en Mobile / Derecha en Desktop) -->
+      <!-- ============================================== -->
+      <div class="order-2 w-full lg:col-span-5 relative animate-entrance" style="animation-delay: 0.1s;">
         <div class="sticky top-28">
           <div class="flex items-center justify-between mb-4 px-1">
             <h2 class="text-sm font-bold uppercase tracking-widest" [ngClass]="isDarkMode() ? 'text-zinc-500' : 'text-gray-400'">Vista Previa (Huésped)</h2>
@@ -179,7 +237,6 @@
             </div>
           </div>
 
-          <!-- LA CARTA DIGITAL (Mockup de App) -->
           <div class="w-full rounded-[2.5rem] border-[6px] shadow-2xl overflow-hidden bg-white relative"
                [ngClass]="isDarkMode() ? 'border-zinc-800 shadow-rose-500/5' : 'border-gray-200'">
             
@@ -187,7 +244,6 @@
               <div class="absolute inset-0 bg-gradient-to-b from-black/60 to-black/90 z-10"></div>
               @if (aliadoInfo().logo_url) { <img [src]="aliadoInfo().logo_url" class="absolute inset-0 w-full h-full object-cover opacity-50 blur-sm"> }
               
-              <!-- AQUÍ ESTÁ EL BADGE DE CATEGORÍA EN EL CELULAR FALSO -->
               <div class="absolute inset-0 z-20 flex flex-col items-center justify-center p-6">
                 <h3 class="text-white font-serif font-black text-2xl tracking-wider text-center uppercase drop-shadow-md leading-none">{{ aliadoInfo().nombre }}</h3>
                 <div class="flex items-center gap-2 mt-3 text-rose-300 text-[10px] font-bold tracking-widest uppercase">
@@ -198,7 +254,6 @@
                   <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> EN LÍNEA</span>
                 </div>
               </div>
-
             </div>
 
             <div class="p-6 pb-12 h-[500px] overflow-y-auto custom-scrollbar bg-[#FDFBF7]">
@@ -413,6 +468,79 @@
           </button>
         </div>
 
+      </div>
+    </div>
+  }
+
+  <!-- ========================================== -->
+  <!-- MODAL DE SIMULACIÓN DE ORDENES -->
+  <!-- ========================================== -->
+  @if (modalSimulacionAbierto() && simulacionData()) {
+    <div class="fixed inset-0 z-[1200] flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md animate-entrance">
+      <div class="w-full max-w-2xl border rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" [ngClass]="isDarkMode() ? 'bg-zinc-950 border-zinc-800' : 'bg-white border-gray-200'">
+        
+        <div class="px-6 py-5 flex items-center justify-between border-b shrink-0" [ngClass]="isDarkMode() ? 'bg-zinc-900/50 border-zinc-800' : 'bg-gray-50 border-gray-100'">
+          <div>
+            <h2 class="text-xl font-bold flex items-center gap-2 tracking-tight" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">
+              <svg class="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+              Simulador de Pedidos
+            </h2>
+            <p class="text-xs mt-1 font-medium" [ngClass]="isDarkMode() ? 'text-zinc-500' : 'text-gray-500'">Proyección automática basada en tu cobertura de {{ propiedadesCubiertas().length }} propiedades Airbnb.</p>
+          </div>
+          <button (click)="modalSimulacionAbierto.set(false)" class="p-2 rounded-full transition-colors" [ngClass]="isDarkMode() ? 'bg-zinc-800 hover:bg-rose-500 hover:text-white text-zinc-400' : 'bg-gray-100 hover:bg-rose-50 hover:text-rose-500 text-gray-500'">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+
+        <div class="p-6 md:p-8 overflow-y-auto custom-scrollbar flex-1">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            <!-- Diario -->
+            <div class="p-5 rounded-2xl border" [ngClass]="isDarkMode() ? 'bg-zinc-900/80 border-zinc-800' : 'bg-gray-50 border-gray-200'">
+              <h4 class="text-[10px] font-bold uppercase tracking-widest mb-1" [ngClass]="isDarkMode() ? 'text-zinc-500' : 'text-gray-500'">Diario (Est.)</h4>
+              <p class="text-3xl font-black mb-1 tracking-tighter" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">{{ simulacionData().diario.ordenes }} <span class="text-sm font-medium tracking-normal" [ngClass]="isDarkMode() ? 'text-zinc-600' : 'text-gray-400'">ords</span></p>
+              <p class="text-sm font-bold text-emerald-500">{{ formatPrice(simulacionData().diario.ingresos) }}</p>
+            </div>
+            <!-- Mensual -->
+            <div class="p-5 rounded-2xl border relative overflow-hidden" [ngClass]="isDarkMode() ? 'bg-indigo-900/20 border-indigo-500/30' : 'bg-indigo-50 border-indigo-200'">
+              <div class="absolute -right-4 -top-4 opacity-10">
+                 <svg class="w-24 h-24 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+              </div>
+              <h4 class="text-[10px] font-bold uppercase tracking-widest mb-1 relative z-10 text-indigo-500">Mensual (Est.)</h4>
+              <p class="text-3xl font-black mb-1 tracking-tighter relative z-10" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">{{ simulacionData().mensual.ordenes }} <span class="text-sm font-medium tracking-normal text-indigo-500/50">ords</span></p>
+              <p class="text-sm font-bold text-emerald-500 relative z-10">{{ formatPrice(simulacionData().mensual.ingresos) }}</p>
+            </div>
+            <!-- Anual -->
+            <div class="p-5 rounded-2xl border" [ngClass]="isDarkMode() ? 'bg-zinc-900/80 border-zinc-800' : 'bg-gray-50 border-gray-200'">
+              <h4 class="text-[10px] font-bold uppercase tracking-widest mb-1" [ngClass]="isDarkMode() ? 'text-zinc-500' : 'text-gray-500'">Anual (Est.)</h4>
+              <p class="text-3xl font-black mb-1 tracking-tighter" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">{{ simulacionData().anual.ordenes }} <span class="text-sm font-medium tracking-normal" [ngClass]="isDarkMode() ? 'text-zinc-600' : 'text-gray-400'">ords</span></p>
+              <p class="text-sm font-bold text-emerald-500">{{ formatPrice(simulacionData().anual.ingresos) }}</p>
+            </div>
+          </div>
+
+          <h3 class="text-sm font-bold uppercase tracking-wider mb-4" [ngClass]="isDarkMode() ? 'text-zinc-400' : 'text-gray-500'">Ejemplo de Órdenes Recientes</h3>
+          <div class="space-y-3">
+            @for (orden of simulacionData().recientes; track orden.id) {
+              <div class="flex items-center justify-between p-4 rounded-xl border transition-colors" [ngClass]="isDarkMode() ? 'bg-zinc-900/50 border-zinc-800 hover:bg-zinc-900' : 'bg-white border-gray-200 hover:bg-gray-50'">
+                <div class="flex items-center gap-4">
+                  <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0" [ngClass]="isDarkMode() ? 'bg-zinc-800 text-zinc-300' : 'bg-gray-100 text-gray-600'">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                  </div>
+                  <div class="min-w-0">
+                    <p class="font-bold text-sm truncate" [ngClass]="isDarkMode() ? 'text-zinc-200' : 'text-gray-800'">#{{ orden.id }} - {{ orden.propiedad }}</p>
+                    <p class="text-[11px] mt-0.5" [ngClass]="isDarkMode() ? 'text-zinc-500' : 'text-gray-500'">Hace {{ orden.minutos }} minutos</p>
+                  </div>
+                </div>
+                <div class="text-right shrink-0">
+                  <p class="font-black text-sm text-emerald-500">{{ formatPrice(orden.monto) }}</p>
+                  <span class="text-[9px] px-2 py-0.5 rounded-full font-bold uppercase mt-1 inline-block"
+                        [ngClass]="orden.estado === 'Entregado' ? 'bg-emerald-500/10 text-emerald-500' : (orden.estado === 'En Camino' ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-500')">
+                    {{ orden.estado }}
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
       </div>
     </div>
   }
