@@ -469,6 +469,37 @@
                       [ngClass]="isDarkMode() ? 'bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700' : 'bg-gray-900 border-gray-800 text-white'">Back to Home</button>
             </div>
           }
+
+          @case ('failure') {
+            <div class="flex-1 flex flex-col items-center justify-center p-8 animate-entrance text-center">
+              
+              <!-- Icono de Error Premium -->
+              <div class="w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-xl" [ngClass]="isDarkMode() ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-red-50 text-red-500 border border-red-100'">
+                <svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+              </div>
+              
+              <!-- Textos -->
+              <h2 class="text-3xl font-extrabold mb-2 tracking-tight" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">Pago Incompleto</h2>
+              <p class="font-medium text-lg mb-8" [ngClass]="isDarkMode() ? 'text-zinc-400' : 'text-gray-600'">La transacción fue cancelada o rechazada.</p>
+              
+              <!-- Caja de información -->
+              <div class="p-4 rounded-xl border text-sm font-medium w-full max-w-sm mb-10 text-left leading-relaxed" [ngClass]="isDarkMode() ? 'bg-zinc-900 border-zinc-800 text-zinc-400' : 'bg-gray-50 border-gray-200 text-gray-500'">
+                No se ha realizado ningún cobro a tu tarjeta. Puedes intentar nuevamente con otro método de pago, tus productos siguen en el carrito.
+              </div>
+              
+              <!-- Botones de Acción -->
+              <div class="flex flex-col gap-3 w-full max-w-sm">
+                <button (click)="goToDetails()" class="w-full py-3.5 rounded-2xl font-bold text-base transition-transform hover:scale-[1.01] active:scale-95 border shadow-sm"
+                        [ngClass]="isDarkMode() ? 'bg-zinc-100 text-zinc-900 border-transparent hover:bg-white' : 'bg-gray-900 text-white border-gray-800 hover:bg-black'">
+                  Reintentar Pago
+                </button>
+                <button (click)="closeCart()" class="w-full py-3.5 rounded-2xl font-bold text-base transition-transform hover:scale-[1.01] active:scale-95 border"
+                        [ngClass]="isDarkMode() ? 'bg-zinc-900 border-zinc-700 text-white hover:bg-zinc-800' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">
+                  Volver a la tienda
+                </button>
+              </div>
+            </div>
+          }
         }
       </div>
     }

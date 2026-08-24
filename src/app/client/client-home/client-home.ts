@@ -65,7 +65,7 @@ export class ClientHome implements OnInit {
   toastMessage = signal<string | null>(null);
   toastTimeout: any;
   
-  checkoutStep = signal<'cart' | 'details' | 'processing' | 'success'>('cart');
+  checkoutStep = signal<'cart' | 'details' | 'processing' | 'success' | 'failure'>('cart');
   orderNumber = signal<string>('');
 
   activeOrder = signal<any>(null);
@@ -103,20 +103,23 @@ export class ClientHome implements OnInit {
       else { this.errorConexion.set(true); this.cargando.set(false); }
     });
 
-    // --- NUEVO: INTERCEPTAR EL REGRESO DE MERCADOPAGO ---
+    // --- INTERCEPTAR EL REGRESO DE MERCADOPAGO ---
     this.route.queryParamMap.subscribe(qParams => {
       const status = qParams.get('status');
       const reference = qParams.get('external_reference');
       
-      if (status === 'approved') {
-        // Si el pago fue exitoso, abrimos el carrito directo en la vista de éxito
-        this.checkoutStep.set('success');
+      // Si MercadoPago manda parámetros, abrimos el modal automáticamente
+      if (status) {
         this.isCartOpen.set(true);
-        this.orderNumber.set('ORD-' + (reference || '000'));
-        this.cart.set([]); // Vaciamos el carrito
-      } else if (status === 'null' || status === 'rejected') {
-        // Si canceló o falló, le avisamos
-        this.showToast("Pago cancelado o rechazado");
+        
+        if (status === 'approved') {
+          this.checkoutStep.set('success');
+          this.orderNumber.set('ORD-' + (reference || '000'));
+          this.cart.set([]); // Vaciamos el carrito
+        } else {
+          // status = 'null', 'rejected' o cualquier otra cosa que no sea aprobado
+          this.checkoutStep.set('failure');
+        }
       }
     });
   }
