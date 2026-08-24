@@ -500,6 +500,35 @@
               </div>
             </div>
           }
+
+          @case ('pending') {
+            <div class="flex-1 flex flex-col items-center justify-center p-8 animate-entrance text-center">
+              
+              <!-- Icono de Pendiente/Información -->
+              <div class="w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-xl" [ngClass]="isDarkMode() ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-blue-50 text-blue-500 border border-blue-100'">
+                <svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+              </div>
+              
+              <!-- Textos -->
+              <h2 class="text-3xl font-extrabold mb-2 tracking-tight" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">Pago en Proceso</h2>
+              <p class="font-medium text-lg mb-8" [ngClass]="isDarkMode() ? 'text-zinc-400' : 'text-gray-600'">Tu transacción se está verificando.</p>
+              
+              <!-- Caja de información -->
+              <div class="p-4 rounded-xl border text-sm font-medium w-full max-w-sm mb-10 text-left leading-relaxed" [ngClass]="isDarkMode() ? 'bg-zinc-900 border-zinc-800 text-zinc-400' : 'bg-gray-50 border-gray-200 text-gray-500'">
+                Si utilizaste <strong>PSE</strong> o un método de pago en efectivo, la confirmación puede tardar un poco. Tus productos seguirán en el carrito hasta que el pago sea aprobado oficialmente.
+              </div>
+              
+              <!-- Botón de Acción -->
+              <div class="flex flex-col gap-3 w-full max-w-sm">
+                <button (click)="closeCart()" class="w-full py-3.5 rounded-2xl font-bold text-base transition-transform hover:scale-[1.01] active:scale-95 border shadow-sm"
+                        [ngClass]="isDarkMode() ? 'bg-zinc-100 text-zinc-900 border-transparent hover:bg-white' : 'bg-gray-900 text-white border-gray-800 hover:bg-black'">
+                  Entendido, volver a la tienda
+                </button>
+              </div>
+            </div>
+          }
         }
       </div>
     }

@@ -65,7 +65,7 @@ export class ClientHome implements OnInit {
   toastMessage = signal<string | null>(null);
   toastTimeout: any;
   
-  checkoutStep = signal<'cart' | 'details' | 'processing' | 'success' | 'failure'>('cart');
+  checkoutStep = signal<'cart' | 'details' | 'processing' | 'success' | 'failure' | 'pending'>('cart');
   orderNumber = signal<string>('');
 
   activeOrder = signal<any>(null);
@@ -103,45 +103,46 @@ export class ClientHome implements OnInit {
       else { this.errorConexion.set(true); this.cargando.set(false); }
     });
 
-    // --- INTERCEPTAR EL REGRESO DE MERCADOPAGO (Lógica BotCompany) ---
+    // --- INTERCEPTAR EL REGRESO DE MERCADOPAGO ---
     this.route.queryParamMap.subscribe(qParams => {
       const status = qParams.get('status');
-      const reference = qParams.get('external_reference'); // Extraemos la referencia[cite: 8]
+      const reference = qParams.get('external_reference');
+      const paymentId = qParams.get('payment_id'); // <-- Atrapamos el rastro de PSE
       
-      if (status && reference) {
+      // Si hay CUALQUIER parámetro de MercadoPago en la URL
+      if (status || reference || paymentId) {
         this.isCartOpen.set(true);
         
-        if (status === 'approved') {
-          // 1. Mostramos estado de "cargando" mientras verificamos
+        if (status === 'approved' && reference) {
           this.checkoutStep.set('processing');
           
-          // 2. Iniciamos el bucle cada 4 segundos igual que en BotCompany[cite: 8]
           const interval = setInterval(() => {
             this.guestService.checkOrderStatus(reference).subscribe((res: any) => {
               if (res.ok && res.estado === 'Aprobado - Por Preparar') {
-                // 3. ¡Confirmado por BD! Detenemos el bucle y mostramos éxito[cite: 8]
                 clearInterval(interval);
                 this.checkoutStep.set('success');
                 this.orderNumber.set('ORD-' + reference);
-                this.cart.set([]); // Vaciamos el carrito
+                this.cart.set([]);
               } else if (res.ok && res.estado === 'Rechazado') {
-                // Si la BD dice que fue rechazado, lo sacamos del bucle
                 clearInterval(interval);
                 this.checkoutStep.set('failure');
               }
             });
-          }, 4000); // Verificamos cada 4 segundos[cite: 8]
+          }, 4000);
 
-          // Timeout de seguridad de 20 segs para no dejarlo cargando infinito si MP falla
           setTimeout(() => {
             clearInterval(interval);
             if (this.checkoutStep() === 'processing') {
-              this.showToast("El pago está tardando en procesarse. Te notificaremos pronto.");
+              // Si pasaron 20 segs y sigue procesando, lo mandamos a pendiente
+              this.checkoutStep.set('pending');
             }
           }, 20000);
           
+        } else if (status === 'pending' || (paymentId && !status)) {
+          // CASO PSE: Se salió del banco o el pago está en validación
+          this.checkoutStep.set('pending');
         } else {
-          // Si el status inicial que llega en la URL ya es de rechazo/cancelación
+          // Rechazos explícitos
           this.checkoutStep.set('failure');
         }
       }
