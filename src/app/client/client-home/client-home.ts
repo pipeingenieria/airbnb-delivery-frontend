@@ -252,14 +252,16 @@ export class ClientHome implements OnInit {
 
     this.checkoutStep.set('processing');
 
-    // 4. Armar el payload (YA SIN EL BYPASS)
+    // 3. Armar el payload
+    const cleanUrl = window.location.href.split('?')[0]; // <--- Extrae la URL exacta y limpia el QR actual
+
     const payload = {
-      propiedad_id: currentProp.id, // <-- Le quitamos el "|| 1"
+      propiedad_id: currentProp.id,
       aliado_id: aliadoId, 
       huesped_nombre: this.huespedNombre(),
       huesped_contacto: this.huespedContacto(),
-      return_url: window.location.href, // <--- LE MANDAMOS LA URL EXACTA ACTUAL
-      items: carritoActual.map(item => ({
+      return_url: cleanUrl, // <--- SE LA ENVIAMOS AL BACKEND
+      items: this.cart().map(item => ({
         item_id: item.id,
         cantidad: item.quantity,
         notas_personalizadas: this.instrucciones()
