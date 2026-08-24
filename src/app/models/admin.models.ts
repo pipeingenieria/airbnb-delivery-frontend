@@ -71,3 +71,17 @@ export interface Categoria {
   activo: boolean;
   requiere_despacho: boolean;
 }
+
+export interface ItemCarrito {
+  item_id: number;
+  cantidad: number;
+  notas_personalizadas?: string; // Opcional
+}
+
+export interface CheckoutRequest {
+  propiedad_id: number;
+  aliado_id: number;
+  huesped_nombre: string;
+  huesped_contacto: string; // Puede ser el correo o teléfono
+  items: ItemCarrito[];
+}

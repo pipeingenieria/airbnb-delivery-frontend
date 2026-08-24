@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Zona, Categoria, Propiedad, Aliado, PropiedadBatchCreate } from '../../models/admin.models';
+import { Zona, Categoria, Propiedad, Aliado, PropiedadBatchCreate, CheckoutRequest } from '../../models/admin.models';
 
 @Injectable({
   providedIn: 'root'
@@ -23,5 +23,16 @@ export class GuestService {
   
   getGuestCatalog(aliadoId: number): Observable<any> {
     return this.http.get(`${this.apiUrl}/guest/ally/${aliadoId}/catalog`);
+  }
+  
+  // Asumiendo que environment.apiUrl es 'https://airbnb-delivery-api.fly.dev/api/v1'
+  // Si en tu env incluye '/core', usa replace o ten una baseUrl general
+  private apiBaseUrl = environment.apiUrl.replace('/core', ''); 
+
+  // ... (tus métodos existentes de getGuestPropertyData, etc.) ...
+
+  // === NUEVO: CHECKOUT Y PAGOS ===
+  crearPreferenciaPago(data: CheckoutRequest): Observable<{ok: boolean, init_point: string, pedido_id: number}> {
+    return this.http.post<any>(`${this.apiBaseUrl}/checkout/crear-preferencia`, data);
   }
 }
