@@ -2,6 +2,7 @@ import { Component, computed, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { GuestService } from '../../admin/services/guest.service'; 
+import { FormsModule } from '@angular/forms'; // <-- NUEVO
 
 interface Establishment {
   id: number;
@@ -28,18 +29,24 @@ interface CartItem extends Product {
   quantity: number;
   establishmentName: string;
   deliveryTime: string;
+  establishmentId: number; // <-- AÑADE ESTA LÍNEA
 }
 
 @Component({
   selector: 'app-client-home',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule], 
   templateUrl: './client-home.html',
   styleUrl: './client-home.scss'
 })
 export class ClientHome implements OnInit {
   private route = inject(ActivatedRoute);
   private guestService = inject(GuestService);
+
+  // Formularios de Checkout
+  huespedNombre = signal<string>('');
+  huespedContacto = signal<string>('');
+  instrucciones = signal<string>('');
 
   isDarkMode = signal<boolean>(false);
   cargando = signal<boolean>(true);
@@ -94,6 +101,23 @@ export class ClientHome implements OnInit {
       const token = params.get('token');
       if (token) this.cargarDatosHuesped(token);
       else { this.errorConexion.set(true); this.cargando.set(false); }
+    });
+
+    // --- NUEVO: INTERCEPTAR EL REGRESO DE MERCADOPAGO ---
+    this.route.queryParamMap.subscribe(qParams => {
+      const status = qParams.get('status');
+      const reference = qParams.get('external_reference');
+      
+      if (status === 'approved') {
+        // Si el pago fue exitoso, abrimos el carrito directo en la vista de éxito
+        this.checkoutStep.set('success');
+        this.isCartOpen.set(true);
+        this.orderNumber.set('ORD-' + (reference || '000'));
+        this.cart.set([]); // Vaciamos el carrito
+      } else if (status === 'null' || status === 'rejected') {
+        // Si canceló o falló, le avisamos
+        this.showToast("Pago cancelado o rechazado");
+      }
     });
   }
 
@@ -156,7 +180,8 @@ export class ClientHome implements OnInit {
         ...product, 
         quantity: 1,
         establishmentName: currentEst?.name || 'Local Store',
-        deliveryTime: currentEst?.time || 'Pending'
+        deliveryTime: currentEst?.time || 'Pending',
+        establishmentId: currentEst?.id || 0 // <-- AÑADE ESTA LÍNEA
       }]);
     }
     this.showToast(`${product.nombre} agregado al carrito`);
@@ -195,12 +220,65 @@ export class ClientHome implements OnInit {
   backToCart() { this.checkoutStep.set('cart'); }
 
   processPayment() {
+    // 1. Validar que no falten datos de contacto
+    if (!this.huespedNombre().trim() || !this.huespedContacto().trim()) {
+      this.showToast("Por favor ingresa tu nombre y correo/WhatsApp");
+      return;
+    }
+
+    // 2. Extraer datos para debug
+    const currentProp = this.propiedad();
+    const carritoActual = this.cart();
+    const aliadoId = carritoActual[0]?.establishmentId; 
+
+    console.log("🔍 DEBUG CHECKOUT:");
+    console.log("🏠 Propiedad:", currentProp);
+    console.log("🛒 Carrito:", carritoActual);
+    console.log("🍔 Aliado ID extraído:", aliadoId);
+
+    // 3. Validaciones exactas
+    if (!currentProp) {
+      this.showToast("Error: No se detecta ninguna propiedad.");
+      return;
+    }
+
+    if (!aliadoId) {
+      alert("❌ Falla el Restaurante. Dale al botón 'Clear all', agrega el producto de nuevo e intenta pagar.");
+      return;
+    }
+
     this.checkoutStep.set('processing');
-    setTimeout(() => {
-      this.orderNumber.set('ORD-' + Math.floor(10000 + Math.random() * 90000));
-      this.checkoutStep.set('success');
-      this.cart.set([]);
-    }, 3000);
+
+    // 4. Armar el payload (YA SIN EL BYPASS)
+    const payload = {
+      propiedad_id: currentProp.id, // <-- Le quitamos el "|| 1"
+      aliado_id: aliadoId, 
+      huesped_nombre: this.huespedNombre(),
+      huesped_contacto: this.huespedContacto(),
+      return_url: window.location.href, // <--- LE MANDAMOS LA URL EXACTA ACTUAL
+      items: carritoActual.map(item => ({
+        item_id: item.id,
+        cantidad: item.quantity,
+        notas_personalizadas: this.instrucciones()
+      }))
+    };
+
+    // 5. Llamar al backend
+    this.guestService.crearPreferenciaPago(payload).subscribe({
+      next: (res: any) => {
+        if (res.ok && res.init_point) {
+          window.location.href = res.init_point;
+        } else {
+          this.showToast("No se pudo generar el link de pago");
+          this.checkoutStep.set('details');
+        }
+      },
+      error: (err: any) => {
+        console.error("Error pasarela:", err);
+        this.showToast("Error de conexión con la pasarela");
+        this.checkoutStep.set('details');
+      }
+    });
   }
 
   finishOrderAndGoHome() {
