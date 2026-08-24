@@ -103,21 +103,45 @@ export class ClientHome implements OnInit {
       else { this.errorConexion.set(true); this.cargando.set(false); }
     });
 
-    // --- INTERCEPTAR EL REGRESO DE MERCADOPAGO ---
+    // --- INTERCEPTAR EL REGRESO DE MERCADOPAGO (Lógica BotCompany) ---
     this.route.queryParamMap.subscribe(qParams => {
       const status = qParams.get('status');
-      const reference = qParams.get('external_reference');
+      const reference = qParams.get('external_reference'); // Extraemos la referencia[cite: 8]
       
-      // Si MercadoPago manda parámetros, abrimos el modal automáticamente
-      if (status) {
+      if (status && reference) {
         this.isCartOpen.set(true);
         
         if (status === 'approved') {
-          this.checkoutStep.set('success');
-          this.orderNumber.set('ORD-' + (reference || '000'));
-          this.cart.set([]); // Vaciamos el carrito
+          // 1. Mostramos estado de "cargando" mientras verificamos
+          this.checkoutStep.set('processing');
+          
+          // 2. Iniciamos el bucle cada 4 segundos igual que en BotCompany[cite: 8]
+          const interval = setInterval(() => {
+            this.guestService.checkOrderStatus(reference).subscribe((res: any) => {
+              if (res.ok && res.estado === 'Aprobado - Por Preparar') {
+                // 3. ¡Confirmado por BD! Detenemos el bucle y mostramos éxito[cite: 8]
+                clearInterval(interval);
+                this.checkoutStep.set('success');
+                this.orderNumber.set('ORD-' + reference);
+                this.cart.set([]); // Vaciamos el carrito
+              } else if (res.ok && res.estado === 'Rechazado') {
+                // Si la BD dice que fue rechazado, lo sacamos del bucle
+                clearInterval(interval);
+                this.checkoutStep.set('failure');
+              }
+            });
+          }, 4000); // Verificamos cada 4 segundos[cite: 8]
+
+          // Timeout de seguridad de 20 segs para no dejarlo cargando infinito si MP falla
+          setTimeout(() => {
+            clearInterval(interval);
+            if (this.checkoutStep() === 'processing') {
+              this.showToast("El pago está tardando en procesarse. Te notificaremos pronto.");
+            }
+          }, 20000);
+          
         } else {
-          // status = 'null', 'rejected' o cualquier otra cosa que no sea aprobado
+          // Si el status inicial que llega en la URL ya es de rechazo/cancelación
           this.checkoutStep.set('failure');
         }
       }

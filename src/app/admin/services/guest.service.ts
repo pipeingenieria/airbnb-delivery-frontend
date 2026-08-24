@@ -35,4 +35,8 @@ export class GuestService {
   crearPreferenciaPago(data: CheckoutRequest): Observable<{ok: boolean, init_point: string, pedido_id: number}> {
     return this.http.post<any>(`${this.apiBaseUrl}/checkout/crear-preferencia`, data);
   }
+
+  checkOrderStatus(pedidoId: string) {
+    return this.http.get(`${this.apiUrl}/checkout/status/${pedidoId}`);
+  }
 }
