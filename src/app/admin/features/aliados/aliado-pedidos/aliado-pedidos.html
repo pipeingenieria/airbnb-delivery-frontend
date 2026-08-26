@@ -1,3 +1,7 @@
+<style>
+  @keyframes entranceScale { 0% { opacity: 0; transform: scale(0.95) translateY(10px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+  .animate-entrance-modal { animation: entranceScale 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+</style>
 <div class="min-h-screen w-full transition-colors duration-300 font-sans"
      [ngClass]="isDarkMode() ? 'bg-[#030712] text-white' : 'bg-gray-100 text-gray-900'">
 
@@ -5,26 +9,21 @@
   <div class="sticky top-0 z-40 border-b shadow-md"
        [ngClass]="isDarkMode() ? 'bg-[#0B1120] border-zinc-800' : 'bg-white border-gray-200'">
     <div class="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between">
+      <!-- Botones de Acción (Header) -->
       <div class="flex items-center gap-4">
-        <button (click)="volverAlCatalogo()" class="p-2 rounded-xl border transition-colors" [ngClass]="isDarkMode() ? 'bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        <!-- NUEVO BOTÓN: Dashboard Histórico -->
+        <button (click)="abrirHistorial()" class="hidden sm:flex px-4 py-2.5 rounded-xl border font-bold text-sm transition-all items-center gap-2 shadow-sm hover:shadow-md"
+                [ngClass]="isDarkMode() ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20' : 'bg-white border-indigo-200 text-indigo-600 hover:bg-indigo-50'">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+          Métricas y Entregas
         </button>
-        <div>
-          <div class="flex items-center gap-3 mb-1">
-            <div class="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Sistema KDS Activo
-            </div>
-          </div>
-          <h1 class="text-2xl font-black tracking-tight" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">Centro de Pedidos en Vivo</h1>
-        </div>
-      </div>
-      
-      <!-- Reloj / Botón de Tema -->
-      <div class="flex items-center gap-4">
+        
+        <!-- Reloj / Botón de Tema -->
         <button (click)="toggleTheme()" class="p-3 rounded-full border transition-colors" [ngClass]="isDarkMode() ? 'bg-zinc-900 border-zinc-700 text-amber-400' : 'bg-gray-50 border-gray-200 text-indigo-600'">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
         </button>
       </div>
+      
     </div>
   </div>
 
@@ -64,22 +63,35 @@
               </div>
             </div>
 
-            <!-- PRODUCTOS -->
-            <div class="p-4 flex-1 overflow-y-auto" [ngClass]="isDarkMode() ? 'bg-zinc-950' : 'bg-white'">
-              <ul class="space-y-4">
+            <!-- PRODUCTOS CON MINIATURAS -->
+            <div class="p-4 flex-1 overflow-y-auto custom-scrollbar" [ngClass]="isDarkMode() ? 'bg-zinc-950' : 'bg-white'">
+              <ul class="space-y-3">
                 @for (item of pedido.detalles; track item.id) {
-                  <li class="flex items-start gap-3">
-                    <span class="flex items-center justify-center w-7 h-7 rounded text-sm font-black shrink-0 border"
-                          [ngClass]="isDarkMode() ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-gray-100 border-gray-200 text-gray-900'">
-                      {{ item.cantidad }}
-                    </span>
-                    <div>
-                      <!-- AQUÍ IMPRIMIMOS EL NOMBRE DEL PRODUCTO REAL -->
-                      <p class="font-bold text-sm leading-tight" [ngClass]="isDarkMode() ? 'text-zinc-200' : 'text-gray-800'">
-                        {{ item.item?.nombre || 'Producto ' + item.item_id }}
-                      </p>
+                  <li class="flex items-start gap-3 p-2 rounded-xl transition-colors border border-transparent" [ngClass]="isDarkMode() ? 'hover:bg-zinc-900 hover:border-zinc-800' : 'hover:bg-gray-50 hover:border-gray-100'">
+                    
+                    <!-- Imagen del Producto -->
+                    <div class="relative w-12 h-12 shrink-0 rounded-lg overflow-hidden border shadow-sm" [ngClass]="isDarkMode() ? 'border-zinc-700 bg-zinc-800' : 'border-gray-200 bg-gray-100'">
+                      @if (item.item?.imagen_url) {
+                        <img [src]="item.item.imagen_url" class="w-full h-full object-cover">
+                      } @else {
+                        <div class="w-full h-full flex items-center justify-center text-lg">🍽️</div>
+                      }
+                    </div>
+
+                    <!-- Datos del Producto -->
+                    <div class="flex-1 min-w-0 pt-0.5">
+                      <div class="flex justify-between items-start gap-2">
+                        <p class="font-bold text-[13px] leading-tight pr-2" [ngClass]="isDarkMode() ? 'text-zinc-200' : 'text-gray-800'">
+                          {{ item.item?.nombre || 'Producto ' + item.item_id }}
+                        </p>
+                        <!-- Cantidad -->
+                        <span class="flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded text-xs font-black shrink-0 border"
+                              [ngClass]="isDarkMode() ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-white border-gray-300 text-gray-900 shadow-sm'">
+                          x{{ item.cantidad }}
+                        </span>
+                      </div>
                       @if (item.notas_personalizadas) {
-                        <p class="text-xs font-bold mt-1 px-2 py-1 rounded inline-block" [ngClass]="isDarkMode() ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-amber-100 text-amber-700 border border-amber-200'">📝 {{ item.notas_personalizadas }}</p>
+                        <p class="text-[10px] font-bold mt-1.5 px-2 py-0.5 rounded inline-block" [ngClass]="isDarkMode() ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-amber-50 text-amber-600 border border-amber-200'">📝 {{ item.notas_personalizadas }}</p>
                       }
                     </div>
                   </li>
@@ -104,4 +116,111 @@
       </div>
     }
   </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL GIGANTE: DASHBOARD HISTÓRICO -->
+  <!-- ========================================== -->
+  @if (modalHistorialAbierto()) {
+    <div class="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md">
+      
+      <div class="w-full max-w-5xl border rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[95vh] animate-entrance-modal" 
+           [ngClass]="isDarkMode() ? 'bg-zinc-950 border-zinc-800' : 'bg-white border-gray-200'">
+        
+        <!-- CABECERA DEL MODAL -->
+        <div class="px-6 py-5 flex items-center justify-between border-b shrink-0 relative overflow-hidden" [ngClass]="isDarkMode() ? 'bg-zinc-900/80 border-zinc-800' : 'bg-gray-50 border-gray-200'">
+          <div class="absolute top-0 right-0 w-64 h-full bg-gradient-to-l from-indigo-500/10 to-transparent pointer-events-none"></div>
+          
+          <div>
+            <h2 class="text-2xl font-black flex items-center gap-3 tracking-tight" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">
+              <span class="p-2 rounded-xl" [ngClass]="isDarkMode() ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-600'">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+              </span>
+              Inteligencia Logística
+            </h2>
+            <p class="text-xs font-bold uppercase tracking-widest mt-1.5 ml-1" [ngClass]="isDarkMode() ? 'text-zinc-500' : 'text-gray-500'">Auditoría Completa de Órdenes</p>
+          </div>
+          <button (click)="cerrarHistorial()" class="p-2.5 rounded-full transition-colors relative z-10" [ngClass]="isDarkMode() ? 'bg-zinc-800 hover:bg-rose-500 hover:text-white text-zinc-400' : 'bg-white border hover:bg-rose-50 hover:text-rose-500 text-gray-500'">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
+          @if (cargandoHistorial()) {
+            <div class="flex justify-center items-center h-40"><div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-500"></div></div>
+          } @else {
+            
+            <!-- TARJETAS DE MÉTRICAS (KPIs) -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+              
+              <!-- Tarjeta 1: Ingresos -->
+              <div class="p-5 rounded-3xl border relative overflow-hidden" [ngClass]="isDarkMode() ? 'bg-zinc-900 border-zinc-800' : 'bg-gray-50 border-gray-200'">
+                <div class="absolute -right-4 -bottom-4 opacity-[0.03] dark:opacity-[0.05]">
+                   <svg class="w-32 h-32 text-emerald-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                </div>
+                <h4 class="text-[11px] font-bold uppercase tracking-widest mb-2" [ngClass]="isDarkMode() ? 'text-zinc-500' : 'text-gray-500'">Facturación Exitosa</h4>
+                <p class="text-4xl font-black tracking-tighter" [ngClass]="isDarkMode() ? 'text-emerald-400' : 'text-emerald-600'">{{ formatPrice(metricas().ingresos) }}</p>
+                <p class="text-xs font-bold mt-2" [ngClass]="isDarkMode() ? 'text-zinc-400' : 'text-gray-600'">Libre de órdenes rechazadas</p>
+              </div>
+
+              <!-- Tarjeta 2: Completadas -->
+              <div class="p-5 rounded-3xl border" [ngClass]="isDarkMode() ? 'bg-zinc-900 border-zinc-800' : 'bg-gray-50 border-gray-200'">
+                <h4 class="text-[11px] font-bold uppercase tracking-widest mb-2" [ngClass]="isDarkMode() ? 'text-zinc-500' : 'text-gray-500'">Órdenes Entregadas</h4>
+                <p class="text-4xl font-black tracking-tighter" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">{{ metricas().entregados }} <span class="text-lg font-medium text-zinc-500">/ {{ metricas().total }}</span></p>
+                <div class="w-full bg-zinc-800 rounded-full h-1.5 mt-3"><div class="bg-indigo-500 h-1.5 rounded-full" [style.width.%]="(metricas().entregados / metricas().total) * 100"></div></div>
+              </div>
+
+              <!-- Tarjeta 3: Rechazos -->
+              <div class="p-5 rounded-3xl border" [ngClass]="isDarkMode() ? 'bg-zinc-900 border-zinc-800' : 'bg-gray-50 border-gray-200'">
+                <h4 class="text-[11px] font-bold uppercase tracking-widest mb-2" [ngClass]="isDarkMode() ? 'text-zinc-500' : 'text-gray-500'">Tasa de Rechazo</h4>
+                <p class="text-4xl font-black tracking-tighter" [ngClass]="isDarkMode() ? 'text-rose-400' : 'text-rose-600'">{{ metricas().tasaRechazo }}%</p>
+                <p class="text-xs font-bold mt-2" [ngClass]="isDarkMode() ? 'text-zinc-400' : 'text-gray-600'">{{ metricas().rechazados }} órdenes canceladas/rebotadas</p>
+              </div>
+
+            </div>
+
+            <!-- TABLA/LISTA DE BITÁCORA -->
+            <h3 class="text-sm font-bold uppercase tracking-widest mb-4" [ngClass]="isDarkMode() ? 'text-zinc-400' : 'text-gray-500'">Bitácora de Operaciones</h3>
+            
+            <div class="rounded-2xl border overflow-hidden shadow-inner" [ngClass]="isDarkMode() ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-200'">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="text-[10px] uppercase tracking-widest border-b" [ngClass]="isDarkMode() ? 'bg-zinc-900 border-zinc-800 text-zinc-500' : 'bg-gray-50 border-gray-200 text-gray-500'">
+                    <th class="px-5 py-4 font-bold">Orden ID</th>
+                    <th class="px-5 py-4 font-bold">Destino (Apto)</th>
+                    <th class="px-5 py-4 font-bold">Fecha / Hora</th>
+                    <th class="px-5 py-4 font-bold">Monto</th>
+                    <th class="px-5 py-4 font-bold text-right">Estado Final</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y text-sm font-semibold" [ngClass]="isDarkMode() ? 'divide-zinc-800 text-zinc-300' : 'divide-gray-100 text-gray-700'">
+                  @for (orden of historialPedidos(); track orden.id) {
+                    <tr class="transition-colors" [ngClass]="isDarkMode() ? 'hover:bg-zinc-800/50' : 'hover:bg-gray-50'">
+                      <td class="px-5 py-4 font-black" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">#{{ orden.id }}</td>
+                      <td class="px-5 py-4">{{ orden.propiedad?.nombre || 'Desconocido' }}</td>
+                      <td class="px-5 py-4 opacity-70">{{ orden.creado_en | date:'short' }}</td>
+                      <td class="px-5 py-4">{{ formatPrice(orden.monto_total) }}</td>
+                      <td class="px-5 py-4 text-right">
+                        <span class="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest inline-block border"
+                              [ngClass]="{
+                                'bg-emerald-500/10 text-emerald-400 border-emerald-500/20': orden.estado_operativo === 'Entregado',
+                                'bg-rose-500/10 text-rose-400 border-rose-500/20': orden.estado_operativo === 'Rechazado' || orden.estado_operativo === 'Cancelado',
+                                'bg-blue-500/10 text-blue-400 border-blue-500/20': orden.estado_operativo === 'En Camino' || orden.estado_operativo === 'Aprobado - Por Preparar',
+                                'bg-zinc-800 text-zinc-400 border-zinc-700': orden.estado_operativo === 'Pendiente Pago'
+                              }">
+                          {{ orden.estado_operativo }}
+                        </span>
+                      </td>
+                    </tr>
+                  }
+                  @if (historialPedidos().length === 0) {
+                    <tr><td colspan="5" class="px-5 py-8 text-center text-sm opacity-50">No hay registros históricos disponibles.</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
 </div>
