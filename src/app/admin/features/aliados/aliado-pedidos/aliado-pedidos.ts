@@ -94,19 +94,17 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
     this.modalHistorialAbierto.set(true);
     this.cargandoHistorial.set(true);
     
-    // Llamada real al backend (Asegúrate de crear este endpoint en FastAPI que traiga TODAS las órdenes del aliado)
+    // Llamada 100% real a la base de datos
     this.http.get(`${environment.apiUrl}/partner/history-orders/${this.token}`).subscribe({
       next: (res: any) => {
-        if (res.ok) this.historialPedidos.set(res.pedidos);
+        if (res.ok) {
+          this.historialPedidos.set(res.pedidos);
+        }
         this.cargandoHistorial.set(false);
       },
       error: () => {
-        // Mock de rescate por si el backend aún no tiene el endpoint listo, para que veas la UI ya mismo.
-        this.historialPedidos.set([
-          { id: 104, propiedad: { nombre: 'Apto 402 - Torre B' }, estado_operativo: 'Entregado', monto_total: 45.00, creado_en: new Date().toISOString() },
-          { id: 103, propiedad: { nombre: 'Apto 101' }, estado_operativo: 'Rechazado', monto_total: 12.50, creado_en: new Date(Date.now() - 86400000).toISOString() },
-          { id: 102, propiedad: { nombre: 'Penthouse 1' }, estado_operativo: 'Entregado', monto_total: 110.00, creado_en: new Date(Date.now() - 172800000).toISOString() }
-        ]);
+        // Si hay error en la red, dejamos el historial vacío
+        this.historialPedidos.set([]);
         this.cargandoHistorial.set(false);
       }
     });
