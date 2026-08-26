@@ -58,7 +58,9 @@
                   {{ pedido.estado_operativo === 'Aprobado - Por Preparar' ? 'Cocina / Preparando' : 'En Camino' }}
                 </span>
                 <h3 class="text-2xl font-black leading-none" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">#ORD-{{ pedido.id }}</h3>
-                <p class="text-xs font-bold mt-1" [ngClass]="isDarkMode() ? 'text-zinc-400' : 'text-gray-600'">📍 Apto / Propiedad {{ pedido.propiedad_id }}</p>
+                <!-- AQUÍ IMPRIMIMOS EL NOMBRE Y DIRECCIÓN REAL -->
+                <p class="text-sm font-bold mt-2" [ngClass]="isDarkMode() ? 'text-zinc-300' : 'text-gray-800'">📍 {{ pedido.propiedad?.nombre || 'Propiedad ' + pedido.propiedad_id }}</p>
+                <p class="text-xs font-semibold mt-0.5" [ngClass]="isDarkMode() ? 'text-zinc-500' : 'text-gray-500'">{{ pedido.propiedad?.direccion_apto || 'Sin dirección registrada' }}</p>
               </div>
             </div>
 
@@ -72,7 +74,10 @@
                       {{ item.cantidad }}
                     </span>
                     <div>
-                      <p class="font-bold text-sm leading-tight" [ngClass]="isDarkMode() ? 'text-zinc-200' : 'text-gray-800'">{{ item.producto?.nombre || 'Producto ' + item.item_id }}</p>
+                      <!-- AQUÍ IMPRIMIMOS EL NOMBRE DEL PRODUCTO REAL -->
+                      <p class="font-bold text-sm leading-tight" [ngClass]="isDarkMode() ? 'text-zinc-200' : 'text-gray-800'">
+                        {{ item.item?.nombre || 'Producto ' + item.item_id }}
+                      </p>
                       @if (item.notas_personalizadas) {
                         <p class="text-xs font-bold mt-1 px-2 py-1 rounded inline-block" [ngClass]="isDarkMode() ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-amber-100 text-amber-700 border border-amber-200'">📝 {{ item.notas_personalizadas }}</p>
                       }
