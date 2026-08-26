@@ -5,6 +5,7 @@ import { AdminService } from '../../../services/admin.service';
 import { Aliado, Categoria, Propiedad, Zona } from '../../../../models/admin.models';
 import { forkJoin } from 'rxjs';
 import * as L from 'leaflet';
+import { Router } from '@angular/router'; // <-- Añade esto arriba
 
 @Component({
   selector: 'app-aliados-list',
@@ -14,6 +15,7 @@ import * as L from 'leaflet';
 })
 export class AliadosList implements OnInit, AfterViewInit {
   private adminService = inject(AdminService);
+  private router = inject(Router);
 
   cargando = signal<boolean>(true);
   subiendoImagen = signal<boolean>(false);
@@ -55,6 +57,17 @@ export class AliadosList implements OnInit, AfterViewInit {
     telefono_contacto: '',
     logo_url: ''
   });
+
+  abrirKDS(aliado: Aliado, e: Event) {
+    e.stopPropagation();
+    if (!aliado.qr_access_token) {
+      this.mostrarToast('⚠️ Este comercio no tiene acceso al sistema KDS aún.');
+      return;
+    }
+    // Abrimos el componente KDS en una nueva pestaña como un sistema independiente
+    const url = this.router.serializeUrl(this.router.createUrlTree(['/aliado-pedidos', aliado.qr_access_token]));
+    window.open(url, '_blank');
+  }
 
   // FILTRO COMBINADO: Texto + Estado
   aliadosFiltrados = computed(() => {

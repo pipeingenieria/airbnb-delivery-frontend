@@ -27,6 +27,7 @@ export interface Aliado {
   nombre_contacto?: string; // <-- AÑADIR
   telefono_contacto?: string;
   logo_url?: string;
+  pedidos_activos?: number;
 }
 
 export interface Zona {
