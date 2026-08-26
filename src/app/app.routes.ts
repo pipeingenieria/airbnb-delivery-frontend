@@ -23,10 +23,11 @@ export const routes: Routes = [
       { path: 'zonas', component: ZonasList },
       { path: 'categorias', component: CategoriasList },
       { path: 'propiedades', component: PropiedadesList },
-      { path: 'aliados', component: AliadosList },
-      { path: 'aliado-pedidos/:token', component: AliadoPedidosComponent }
+      { path: 'aliados', component: AliadosList }
     ]
   },
+
+  { path: 'aliado-pedidos/:token', component: AliadoPedidosComponent },
 
   // Portal de Gestión para los Aliados Comerciales
   { 
