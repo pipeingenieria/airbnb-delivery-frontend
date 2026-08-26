@@ -7,6 +7,7 @@ import { CategoriasList } from './admin/features/categorias/categorias-list/cate
 import { PropiedadesList } from './admin/features/propiedades/propiedades-list/propiedades-list';
 import { AliadosList } from './admin/features/aliados/aliados-list/aliados-list';
 import { AliadoForm } from './admin/features/aliados/aliado-form/aliado-form';
+import { AliadoPedidosComponent } from './admin/features/aliados/aliado-pedidos/aliado-pedidos';
 
 export const routes: Routes = [
   // Si alguien entra sin token (Ej: a la raíz pura)
@@ -22,7 +23,8 @@ export const routes: Routes = [
       { path: 'zonas', component: ZonasList },
       { path: 'categorias', component: CategoriasList },
       { path: 'propiedades', component: PropiedadesList },
-      { path: 'aliados', component: AliadosList }
+      { path: 'aliados', component: AliadosList },
+      { path: 'aliado-pedidos/:token', component: AliadoPedidosComponent }
     ]
   },
 
