@@ -1,6 +1,29 @@
 <style>
   @keyframes entranceScale { 0% { opacity: 0; transform: scale(0.95) translateY(10px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
   .animate-entrance-modal { animation: entranceScale 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  
+  /* --- NUEVAS ANIMACIONES DE DESPACHO --- */
+  @keyframes scooterDrive {
+    0% { transform: translateX(-150vw) rotate(-5deg) scale(0.8); opacity: 0; }
+    20% { transform: translateX(-10vw) rotate(0deg) scale(1.3); opacity: 1; }
+    80% { transform: translateX(10vw) rotate(0deg) scale(1.3); opacity: 1; }
+    100% { transform: translateX(150vw) rotate(10deg) scale(0.8); opacity: 0; }
+  }
+  .animate-scooter-drive { animation: scooterDrive 2.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+  
+  @keyframes fastPan {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(300%); }
+  }
+  .animate-fast-pan { animation: fastPan 0.4s linear infinite; }
+  
+  @keyframes fadeInUpCustom {
+    0% { opacity: 0; transform: translateY(20px); }
+    20% { opacity: 1; transform: translateY(0); }
+    80% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-20px); }
+  }
+  .animate-fade-in-up { animation: fadeInUpCustom 2.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 </style>
 <div class="min-h-screen w-full transition-colors duration-300 font-sans"
      [ngClass]="isDarkMode() ? 'bg-[#030712] text-white' : 'bg-gray-100 text-gray-900'">
@@ -25,17 +48,18 @@
       </div>
 
       <!-- Botones de Acción (Header) -->
-      <div class="flex items-center gap-4">
-        <!-- BOTÓN: Dashboard Histórico -->
-        <button (click)="abrirHistorial()" class="hidden sm:flex px-4 py-2.5 rounded-xl border font-bold text-sm transition-all items-center gap-2 shadow-sm hover:shadow-md"
+      <div class="flex items-center gap-2 sm:gap-4 shrink-0">
+        <!-- BOTÓN: Dashboard Histórico (CORREGIDO PARA MOBILE) -->
+        <button (click)="abrirHistorial()" class="flex px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border font-bold text-sm transition-all items-center gap-2 shadow-sm hover:shadow-md"
                 [ngClass]="isDarkMode() ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20' : 'bg-white border-indigo-200 text-indigo-600 hover:bg-indigo-50'">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-          Historial de Pagos
+          <svg class="w-5 h-5 sm:w-4 sm:h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+          <!-- El texto ahora se oculta en mobile, pero el botón sigue vivo -->
+          <span class="hidden sm:block">Métricas y Entregas</span>
         </button>
         
         <!-- Reloj / Botón de Tema -->
-        <button (click)="toggleTheme()" class="p-3 rounded-full border transition-colors" [ngClass]="isDarkMode() ? 'bg-zinc-900 border-zinc-700 text-amber-400' : 'bg-gray-50 border-gray-200 text-indigo-600'">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+        <button (click)="toggleTheme()" class="p-2 sm:p-3 rounded-xl sm:rounded-full border transition-colors shrink-0" [ngClass]="isDarkMode() ? 'bg-zinc-900 border-zinc-700 text-amber-400' : 'bg-gray-50 border-gray-200 text-indigo-600'">
+          <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
         </button>
       </div>
       
@@ -113,11 +137,22 @@
             <!-- BOTONES DE ACCIÓN -->
             <div class="p-4 border-t" [ngClass]="isDarkMode() ? 'bg-zinc-900 border-zinc-800' : 'bg-gray-50 border-gray-200'">
               @if (pedido.estado_operativo === 'Aprobado - Por Preparar') {
-                <button (click)="cambiarEstado(pedido.id, 'En Camino')" class="w-full py-4 rounded-xl font-black text-white text-base tracking-wide transition-all active:scale-95 bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-500/30">
-                  Despachar Pedido 🚀
+                <!-- AHORA LLAMA A abrirConfirmacion -->
+                <button (click)="abrirConfirmacion(pedido, 'En Camino')" 
+                        [disabled]="pedidoEnDespacho() === pedido.id"
+                        class="relative overflow-hidden w-full py-4 rounded-xl font-black text-white text-base tracking-wide transition-all active:scale-95 shadow-lg shadow-blue-500/30"
+                        [ngClass]="pedidoEnDespacho() === pedido.id ? 'bg-blue-800' : 'bg-blue-600 hover:bg-blue-500'">
+                  @if (pedidoEnDespacho() === pedido.id) {
+                    <span class="flex items-center justify-center gap-2 animate-pulse">
+                      Despachando... 📦
+                    </span>
+                  } @else {
+                    Despachar Pedido 🚀
+                  }
                 </button>
               } @else {
-                <button (click)="cambiarEstado(pedido.id, 'Entregado')" class="w-full py-4 rounded-xl font-black text-white text-base tracking-wide transition-all active:scale-95 bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-500/30">
+                <!-- TAMBIÉN LE PONEMOS SEGURIDAD AL DE ENTREGAR -->
+                <button (click)="abrirConfirmacion(pedido, 'Entregado')" class="w-full py-4 rounded-xl font-black text-white text-base tracking-wide transition-all active:scale-95 bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-500/30">
                   Marcar Entregado ✓
                 </button>
               }
@@ -127,6 +162,75 @@
       </div>
     }
   </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL DE CONFIRMACIÓN PREVIA               -->
+  <!-- ========================================== -->
+  @if (pedidoAConfirmar()) {
+    <div class="fixed inset-0 z-[9500] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-entrance-modal">
+      <div class="w-full max-w-sm p-6 sm:p-8 rounded-[2rem] border shadow-2xl flex flex-col items-center text-center" [ngClass]="isDarkMode() ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'">
+        
+        <!-- Ícono Dinámico -->
+        <div class="w-16 h-16 rounded-full flex items-center justify-center mb-5 border-4" [ngClass]="estadoAConfirmar() === 'En Camino' ? 'bg-blue-500/10 border-blue-500/20 text-blue-500' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'">
+          @if (estadoAConfirmar() === 'En Camino') {
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          } @else {
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+          }
+        </div>
+        
+        <!-- Textos Dinámicos -->
+        <h3 class="text-2xl font-black mb-2 tracking-tight" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">
+          {{ estadoAConfirmar() === 'En Camino' ? '¿Despachar Orden?' : '¿Finalizar Entrega?' }}
+        </h3>
+        
+        <p class="text-sm font-semibold mb-8 leading-relaxed" [ngClass]="isDarkMode() ? 'text-slate-400' : 'text-gray-500'">
+          Estás a punto de confirmar el estado para <br>
+          <span class="font-black text-lg px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-500 inline-block mt-2 mb-1">#ORD-{{ pedidoAConfirmar().id }}</span><br>
+          {{ estadoAConfirmar() === 'En Camino' ? 'Se notificará al huésped que su comida ya va en camino.' : 'Esta orden se cerrará y pasará al historial.' }}
+        </p>
+
+        <!-- Botones -->
+        <div class="flex gap-3 w-full">
+          <button (click)="cerrarConfirmacion()" class="flex-1 py-3.5 rounded-xl font-bold transition-all border" [ngClass]="isDarkMode() ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200'">
+            Cancelar
+          </button>
+          <button (click)="ejecutarConfirmacion()" class="flex-1 py-3.5 rounded-xl font-black text-white transition-all shadow-lg active:scale-95" [ngClass]="estadoAConfirmar() === 'En Camino' ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-500/30' : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/30'">
+            Sí, Continuar
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- ========================================== -->
+  <!-- ANIMACIÓN ULTRA-PRO DE DESPACHO            -->
+  <!-- ========================================== -->
+  @if (animacionDespacho()) {
+    <div class="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/85 backdrop-blur-lg">
+      <div class="relative flex flex-col items-center justify-center w-full overflow-hidden">
+         
+         <!-- Vehículo (Motocicleta a toda velocidad) -->
+         <div class="text-[100px] sm:text-[130px] animate-scooter-drive z-10 filter drop-shadow-[0_0_30px_rgba(99,102,241,0.8)]">
+           🛵💨
+         </div>
+         
+         <!-- Pista / Carretera de Neón -->
+         <div class="w-full max-w-lg h-1.5 bg-slate-800 rounded-full overflow-hidden absolute top-[55%]">
+            <div class="w-1/3 h-full bg-gradient-to-r from-transparent via-indigo-500 to-transparent rounded-full animate-fast-pan shadow-[0_0_15px_rgba(99,102,241,1)]"></div>
+         </div>
+         
+         <!-- Texto de Confirmación -->
+         <div class="mt-16 text-center animate-fade-in-up">
+           <h2 class="text-4xl sm:text-5xl font-black text-white tracking-tight mb-3 flex items-center justify-center gap-3 drop-shadow-lg">
+             ¡Orden en Camino! <span class="w-4 h-4 rounded-full bg-emerald-500 animate-ping shadow-[0_0_20px_rgba(16,185,129,0.8)]"></span>
+           </h2>
+           <p class="text-indigo-300 font-bold tracking-widest uppercase text-sm sm:text-base">El repartidor ha iniciado la ruta de entrega</p>
+         </div>
+      </div>
+    </div>
+  }
 
   <!-- ========================================== -->
   <!-- MODAL GIGANTE: DASHBOARD HISTÓRICO PRO -->
