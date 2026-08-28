@@ -96,6 +96,7 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
     const inicio = this.fechaInicio() ? new Date(this.fechaInicio()).getTime() : null;
     const fin = this.fechaFin() ? new Date(this.fechaFin()).getTime() + 86399000 : null; 
 
+    // 1. Filtro de Fechas
     if (inicio || fin) {
       filtrados = filtrados.filter(p => {
         const fechaPedido = new Date(p.creado_en).getTime();
@@ -105,10 +106,13 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
       });
     }
 
+    // 2. Filtro de Estados (CORREGIDO PARA LOGÍSTICA KDS)
     if (estado === 'Completados') filtrados = filtrados.filter(p => p.estado_operativo === 'Entregado');
-    else if (estado === 'Pendientes') filtrados = filtrados.filter(p => ['En Camino', 'Aprobado - Por Preparar', 'Pendiente Pago', 'Creado'].includes(p.estado_operativo));
+    else if (estado === 'Urgentes (Cocina)') filtrados = filtrados.filter(p => ['Aprobado - Por Preparar', 'En Camino'].includes(p.estado_operativo));
+    else if (estado === 'Pendientes (Pago)') filtrados = filtrados.filter(p => ['Pendiente Pago', 'Pendiente', 'Creado'].includes(p.estado_operativo));
     else if (estado === 'Rechazados') filtrados = filtrados.filter(p => ['Rechazado', 'Cancelado'].includes(p.estado_operativo));
 
+    // 3. Filtro de Búsqueda
     if (texto) {
       filtrados = filtrados.filter(p => 
         p.id.toString().includes(texto) ||
@@ -139,6 +143,17 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
       tasaRechazo: pedidos.length ? Math.round((rechazadosArray.length / pedidos.length) * 100) : 0,
     };
   });
+
+  // NUEVO: Función para calcular el tiempo real transcurrido (Edad del pedido)
+  getTiempoTranscurrido(fechaStr: string): string {
+    if (!fechaStr) return '--';
+    const diffMs = new Date().getTime() - new Date(fechaStr).getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 60) return `Hace ${diffMins} min`;
+    const diffHrs = Math.floor(diffMins / 60);
+    return `Hace ${diffHrs}h ${diffMins % 60}m`;
+  }
 
   actualizarGraficos(pedidos: any[]) {
     if (!document.getElementById('ventasChart')) return;
