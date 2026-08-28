@@ -63,6 +63,19 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
   paginaActual = signal<number>(1);
   itemsPorPagina = signal<number>(10);
 
+  // --- CONVERSIÓN DE MONEDA ULTRA-PRO ---
+  mostrarEnDolares = signal<boolean>(false);
+  
+  // TODO: Fácil de reemplazar. Solo tienes que hacer un fetch a un API gratuito 
+  // (ej: api.exchangerate-api.com) en el ngOnInit y actualizar este valor.
+  tasaCambioCopAUsd = 4200.0; 
+
+  toggleMoneda() {
+    this.mostrarEnDolares.set(!this.mostrarEnDolares());
+    // Refrescamos las gráficas para que cambien de COP a USD dinámicamente
+    this.actualizarGraficos(this.pedidosFiltrados());
+  }
+
   // Rebanamos los datos filtrados para mostrar solo los de la página actual
   pedidosPaginados = computed(() => {
     const filtrados = this.pedidosFiltrados();
@@ -162,12 +175,15 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
     const gridColor = isDark ? '#1e293b' : '#f1f5f9';
     const borderColor = isDark ? '#0b1120' : '#ffffff';
 
+    // Divisor dinámico según la moneda seleccionada
+    const divisorMoneda = this.mostrarEnDolares() ? this.tasaCambioCopAUsd : 1;
+
     // 1. DATA LÍNEAS
     const exitosos = pedidos.filter(p => ['Aprobado - Por Preparar', 'En Camino', 'Entregado'].includes(p.estado_operativo));
     const ventasPorDia: any = {};
     exitosos.forEach(p => {
       const fecha = new Date(p.creado_en).toLocaleDateString('es-CO', { month: 'short', day: 'numeric' });
-      ventasPorDia[fecha] = (ventasPorDia[fecha] || 0) + p.monto_total;
+      ventasPorDia[fecha] = (ventasPorDia[fecha] || 0) + (p.monto_total / divisorMoneda);
     });
 
     // 2. DATA DOUGHNUT
@@ -183,7 +199,7 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
     exitosos.forEach(p => {
       (p.detalles || []).forEach((d: any) => {
         const nombre = d.item?.nombre || 'Desconocido';
-        conteoProductos[nombre] = (conteoProductos[nombre] || 0) + (d.precio_unitario * d.cantidad);
+        conteoProductos[nombre] = (conteoProductos[nombre] || 0) + ((d.precio_unitario * d.cantidad) / divisorMoneda);
       });
     });
     const topProdArray = Object.entries(conteoProductos).sort(([,a]:any, [,b]:any) => b - a).slice(0, 5);
@@ -263,8 +279,16 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
 
   limpiarFechas() { if(this.datePickerInstance) { this.datePickerInstance.clear(); this.fechaInicio.set(''); this.fechaFin.set(''); } }
   cerrarHistorial() { this.modalHistorialAbierto.set(false); }
-  formatPrice(price: number): string { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(price); }
-  
+formatPrice(price: number): string { 
+    if (this.mostrarEnDolares()) {
+      const priceUsd = price / this.tasaCambioCopAUsd;
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(priceUsd);
+    } else {
+      // COP sin centavos para que se vea limpio
+      return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(price); 
+    }
+  }
+
   // Utilidad para calcular 45 mins de entrega
   getTiempoEstimado(fechaStr: string): string {
     if (!fechaStr) return '--';

@@ -193,23 +193,32 @@
             <div class="flex justify-center items-center h-64"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div></div>
           } @else {
             
+            <!-- ENCABEZADO MÉTRICAS Y BOTÓN MONEDA -->
+            <div class="flex justify-between items-end mb-4">
+               <h3 class="font-bold text-lg" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">Resumen Financiero</h3>
+               <button (click)="toggleMoneda()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors shadow-sm" [ngClass]="isDarkMode() ? 'bg-slate-800 border-slate-700 text-indigo-400 hover:bg-slate-700' : 'bg-white border-gray-200 text-indigo-600 hover:bg-gray-50'">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                  {{ mostrarEnDolares() ? 'Ver en COP' : 'Ver en USD' }}
+               </button>
+            </div>
+
             <!-- TARJETAS DE MÉTRICAS -->
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
-              <div class="p-6 rounded-3xl border shadow-sm" [ngClass]="isDarkMode() ? 'bg-slate-900/50 border-slate-800' : 'bg-white border-gray-200'">
-                <h4 class="text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2" [ngClass]="isDarkMode() ? 'text-slate-500' : 'text-gray-500'">Ventas Exitosas</h4>
-                <p class="text-3xl sm:text-4xl font-black tracking-tighter" [ngClass]="isDarkMode() ? 'text-emerald-400' : 'text-emerald-600'">{{ formatPrice(metricas().ingresos) }}</p>
+              <div class="p-5 sm:p-6 rounded-3xl border shadow-sm overflow-hidden" [ngClass]="isDarkMode() ? 'bg-slate-900/50 border-slate-800' : 'bg-white border-gray-200'">
+                <h4 class="text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2 truncate" [ngClass]="isDarkMode() ? 'text-slate-500' : 'text-gray-500'">Ventas Exitosas</h4>
+                <p class="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tighter truncate w-full" title="{{ formatPrice(metricas().ingresos) }}" [ngClass]="isDarkMode() ? 'text-emerald-400' : 'text-emerald-600'">{{ formatPrice(metricas().ingresos) }}</p>
               </div>
-              <div class="p-6 rounded-3xl border shadow-sm" [ngClass]="isDarkMode() ? 'bg-slate-900/50 border-slate-800' : 'bg-white border-gray-200'">
-                <h4 class="text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2" [ngClass]="isDarkMode() ? 'text-slate-500' : 'text-gray-500'">Ticket Promedio</h4>
-                <p class="text-3xl sm:text-4xl font-black tracking-tighter" [ngClass]="isDarkMode() ? 'text-indigo-400' : 'text-indigo-600'">{{ formatPrice(metricas().ticketPromedio) }}</p>
+              <div class="p-5 sm:p-6 rounded-3xl border shadow-sm overflow-hidden" [ngClass]="isDarkMode() ? 'bg-slate-900/50 border-slate-800' : 'bg-white border-gray-200'">
+                <h4 class="text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2 truncate" [ngClass]="isDarkMode() ? 'text-slate-500' : 'text-gray-500'">Ticket Promedio</h4>
+                <p class="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tighter truncate w-full" title="{{ formatPrice(metricas().ticketPromedio) }}" [ngClass]="isDarkMode() ? 'text-indigo-400' : 'text-indigo-600'">{{ formatPrice(metricas().ticketPromedio) }}</p>
               </div>
-              <div class="p-6 rounded-3xl border shadow-sm" [ngClass]="isDarkMode() ? 'bg-slate-900/50 border-slate-800' : 'bg-white border-gray-200'">
-                <h4 class="text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2" [ngClass]="isDarkMode() ? 'text-slate-500' : 'text-gray-500'">Órdenes Confirmadas</h4>
-                <p class="text-3xl sm:text-4xl font-black tracking-tighter" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">{{ metricas().entregados }} <span class="text-lg font-medium" [ngClass]="isDarkMode() ? 'text-slate-600' : 'text-gray-400'">/ {{ metricas().total }}</span></p>
+              <div class="p-5 sm:p-6 rounded-3xl border shadow-sm overflow-hidden" [ngClass]="isDarkMode() ? 'bg-slate-900/50 border-slate-800' : 'bg-white border-gray-200'">
+                <h4 class="text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2 truncate" [ngClass]="isDarkMode() ? 'text-slate-500' : 'text-gray-500'">Órdenes Confirmadas</h4>
+                <p class="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tighter truncate w-full" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">{{ metricas().entregados }} <span class="text-lg font-medium" [ngClass]="isDarkMode() ? 'text-slate-600' : 'text-gray-400'">/ {{ metricas().total }}</span></p>
               </div>
-              <div class="p-6 rounded-3xl border shadow-sm" [ngClass]="isDarkMode() ? 'bg-slate-900/50 border-slate-800' : 'bg-white border-gray-200'">
-                <h4 class="text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2" [ngClass]="isDarkMode() ? 'text-slate-500' : 'text-gray-500'">Tasa de Rechazo</h4>
-                <p class="text-3xl sm:text-4xl font-black tracking-tighter" [ngClass]="isDarkMode() ? 'text-rose-400' : 'text-rose-600'">{{ metricas().tasaRechazo }}%</p>
+              <div class="p-5 sm:p-6 rounded-3xl border shadow-sm overflow-hidden" [ngClass]="isDarkMode() ? 'bg-slate-900/50 border-slate-800' : 'bg-white border-gray-200'">
+                <h4 class="text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2 truncate" [ngClass]="isDarkMode() ? 'text-slate-500' : 'text-gray-500'">Tasa de Rechazo</h4>
+                <p class="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tighter truncate w-full" [ngClass]="isDarkMode() ? 'text-rose-400' : 'text-rose-600'">{{ metricas().tasaRechazo }}%</p>
               </div>
             </div>
 
