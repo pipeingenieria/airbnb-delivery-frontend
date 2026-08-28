@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms'; 
+import Chart from 'chart.js/auto'; // <-- Añade esta línea EN LOS IMPORTS HASTA ARRIBA DEL ARCHIVO
 import { environment } from '../../../../../environments/environment'; 
 
 @Component({
@@ -74,42 +75,64 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
   historialPedidos = signal<any[]>([]);
   cargandoHistorial = signal<boolean>(false);
 
-  // Filtros interactivos (Estilo BotCompany)
+  // Filtros Avanzados
   filtroTexto = signal<string>('');
   filtroEstado = signal<string>('Todos');
+  fechaInicio = signal<string>('');
+  fechaFin = signal<string>('');
+  
+  graficoVentas: any;
 
-  // 1. Filtrado en tiempo real
   pedidosFiltrados = computed(() => {
     let filtrados = this.historialPedidos();
     const estado = this.filtroEstado();
     const texto = this.filtroTexto().toLowerCase().trim();
+    const inicio = this.fechaInicio() ? new Date(this.fechaInicio()).getTime() : null;
+    const fin = this.fechaFin() ? new Date(this.fechaFin()).getTime() + 86399000 : null; // Fin del día
 
-    // Filtro por píldoras de estado
+    // 1. Filtro de Fechas
+    if (inicio || fin) {
+      filtrados = filtrados.filter(p => {
+        const fechaPedido = new Date(p.creado_en).getTime();
+        if (inicio && fechaPedido < inicio) return false;
+        if (fin && fechaPedido > fin) return false;
+        return true;
+      });
+    }
+
+    // 2. Filtro de Estados
     if (estado === 'Completados') filtrados = filtrados.filter(p => p.estado_operativo === 'Entregado');
-    else if (estado === 'Pendientes') filtrados = filtrados.filter(p => ['En Camino', 'Aprobado - Por Preparar', 'Pendiente Pago'].includes(p.estado_operativo));
+    else if (estado === 'Pendientes') filtrados = filtrados.filter(p => ['En Camino', 'Aprobado - Por Preparar', 'Pendiente Pago', 'Creado'].includes(p.estado_operativo));
     else if (estado === 'Rechazados') filtrados = filtrados.filter(p => ['Rechazado', 'Cancelado'].includes(p.estado_operativo));
 
-    // Filtro de búsqueda (ID, Apartamento o Nombre de Producto)
+    // 3. Filtro de Búsqueda (Incluye MercadoPago ID)
     if (texto) {
       filtrados = filtrados.filter(p => 
         p.id.toString().includes(texto) ||
+        (p.liquidacion?.gateway_tx_id || '').toLowerCase().includes(texto) ||
         (p.propiedad?.nombre || '').toLowerCase().includes(texto) ||
         (p.detalles || []).some((d: any) => (d.item?.nombre || '').toLowerCase().includes(texto))
       );
     }
+    
+    // Disparamos la actualización del gráfico cada vez que cambian los filtros
+    setTimeout(() => this.actualizarGrafico(filtrados), 50);
     return filtrados;
   });
 
-  // 2. Calculadora de KPIs dinámicos
   metricas = computed(() => {
     const pedidos = this.pedidosFiltrados();
-    const entregados = pedidos.filter(p => p.estado_operativo === 'Entregado');
-    const rechazadosArray = pedidos.filter(p => ['Rechazado', 'Cancelado'].includes(p.estado_operativo)); // Capturamos los rechazados
-    const ingresos = entregados.reduce((acc, p) => acc + (p.monto_total || 0), 0);
     
-    // Extracción de Top Productos
+    // CORRECCIÓN: "Aprobado", "En Camino" y "Entregado" YA son plata en caja.
+    const estadosExitosos = ['Aprobado - Por Preparar', 'En Camino', 'Entregado'];
+    const exitosos = pedidos.filter(p => estadosExitosos.includes(p.estado_operativo));
+    const rechazadosArray = pedidos.filter(p => ['Rechazado', 'Cancelado'].includes(p.estado_operativo));
+    
+    const ingresos = exitosos.reduce((acc, p) => acc + (p.monto_total || 0), 0);
+    
+    // Top Productos
     const conteoProductos: { [key: string]: { cantidad: number, ingresos: number } } = {};
-    entregados.forEach(p => {
+    exitosos.forEach(p => {
       (p.detalles || []).forEach((d: any) => {
         const nombre = d.item?.nombre || 'Producto Desconocido';
         if (!conteoProductos[nombre]) conteoProductos[nombre] = { cantidad: 0, ingresos: 0 };
@@ -120,32 +143,75 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
 
     const topProductos = Object.entries(conteoProductos)
       .map(([nombre, datos]) => ({ nombre, ...datos }))
-      .sort((a, b) => b.ingresos - a.ingresos)
-      .slice(0, 5);
-
-    const maxIngresoProducto = topProductos.length ? topProductos[0].ingresos : 1;
+      .sort((a, b) => b.ingresos - a.ingresos).slice(0, 5);
 
     return {
       total: pedidos.length,
-      entregados: entregados.length, // Usamos 'entregados' para que haga match con el HTML
-      rechazados: rechazadosArray.length, // Devolvemos el conteo crudo
+      entregados: exitosos.length, // Ventas reales confirmadas
+      rechazados: rechazadosArray.length,
       ingresos: ingresos,
-      ticketPromedio: entregados.length ? ingresos / entregados.length : 0,
+      ticketPromedio: exitosos.length ? ingresos / exitosos.length : 0,
       tasaRechazo: pedidos.length ? Math.round((rechazadosArray.length / pedidos.length) * 100) : 0,
       topProductos,
-      maxIngresoProducto
+      maxIngresoProducto: topProductos.length ? topProductos[0].ingresos : 1
     };
   });
-  
+
+  actualizarGrafico(pedidos: any[]) {
+    if (!document.getElementById('ventasChart')) return;
+    
+    const exitosos = pedidos.filter(p => ['Aprobado - Por Preparar', 'En Camino', 'Entregado'].includes(p.estado_operativo));
+    
+    // Agrupar ventas por día
+    const ventasPorDia: any = {};
+    exitosos.forEach(p => {
+      const fecha = new Date(p.creado_en).toLocaleDateString('es-CO', { month: 'short', day: 'numeric' });
+      ventasPorDia[fecha] = (ventasPorDia[fecha] || 0) + p.monto_total;
+    });
+
+    const labels = Object.keys(ventasPorDia).reverse();
+    const data = Object.values(ventasPorDia).reverse();
+
+    if (this.graficoVentas) this.graficoVentas.destroy();
+
+    const ctx = document.getElementById('ventasChart') as HTMLCanvasElement;
+    this.graficoVentas = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Ingresos ($)',
+          data: data,
+          borderColor: '#4F46E5', // Indigo 600
+          backgroundColor: 'rgba(79, 70, 229, 0.1)',
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, grid: { color: this.isDarkMode() ? '#1e293b' : '#f1f5f9' } }, x: { grid: { display: false } } }
+      }
+    });
+  }
+
   abrirHistorial() {
     this.modalHistorialAbierto.set(true);
     this.cargandoHistorial.set(true);
     this.filtroEstado.set('Todos');
     this.filtroTexto.set('');
+    this.fechaInicio.set('');
+    this.fechaFin.set('');
     
     this.http.get(`${environment.apiUrl}/partner/history-orders/${this.token}`).subscribe({
       next: (res: any) => {
-        if (res.ok) this.historialPedidos.set(res.pedidos);
+        if (res.ok) {
+          this.historialPedidos.set(res.pedidos);
+          setTimeout(() => this.actualizarGrafico(res.pedidos), 100); // Dibuja la gráfica al cargar
+        }
         this.cargandoHistorial.set(false);
       },
       error: () => { this.historialPedidos.set([]); this.cargandoHistorial.set(false); }
@@ -154,7 +220,5 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
 
   cerrarHistorial() { this.modalHistorialAbierto.set(false); }
 
-  formatPrice(price: number): string {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(price);
-  }
+  formatPrice(price: number): string { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(price); }
 }
