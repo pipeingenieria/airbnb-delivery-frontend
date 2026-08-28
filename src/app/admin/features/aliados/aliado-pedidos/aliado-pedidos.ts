@@ -5,7 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { environment } from '../../../../../environments/environment';
 import Chart from 'chart.js/auto';
-import flatpickr from 'flatpickr'; // <-- Importación directa de la librería
+import flatpickr from 'flatpickr';
 
 @Component({
   selector: 'app-aliado-pedidos',
@@ -15,7 +15,6 @@ import flatpickr from 'flatpickr'; // <-- Importación directa de la librería
   styleUrls: ['./aliado-pedidos.scss'] 
 })
 export class AliadoPedidosComponent implements OnInit, OnDestroy {
-  // ... (Deja tu lógica existente de ngOnInit, toggleTheme, cargarPedidos, cambiarEstado intacta) ...
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private http = inject(HttpClient);
@@ -36,6 +35,7 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
   ngOnDestroy() { if (this.pollingInterval) clearInterval(this.pollingInterval); }
   toggleTheme() { this.isDarkMode.set(!this.isDarkMode()); }
   volverAlCatalogo() { this.router.navigate(['/aliado', this.token]); }
+  
   cargarPedidos() {
     this.http.get(`${environment.apiUrl}/partner/live-orders/${this.token}`).subscribe({
       next: (res: any) => { if (res.ok) this.pedidosActivos.set(res.pedidos); this.cargando.set(false); },
@@ -49,7 +49,7 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
   }
 
   // =========================================================
-  // DASHBOARD HISTÓRICO ULTRA-PRO (BOTCOMPANY STYLE)
+  // DASHBOARD HISTÓRICO ULTRA-PRO
   // =========================================================
   modalHistorialAbierto = signal<boolean>(false);
   historialPedidos = signal<any[]>([]);
@@ -60,7 +60,6 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
   fechaInicio = signal<string>('');
   fechaFin = signal<string>('');
   
-  // Instancias de los 3 gráficos
   graficoVentas: any;
   graficoEstados: any;
   graficoTop: any;
@@ -91,6 +90,7 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
         p.id.toString().includes(texto) ||
         (p.liquidacion?.gateway_tx_id || '').toLowerCase().includes(texto) ||
         (p.propiedad?.nombre || '').toLowerCase().includes(texto) ||
+        (p.propiedad?.direccion_apto || '').toLowerCase().includes(texto) ||
         (p.detalles || []).some((d: any) => (d.item?.nombre || '').toLowerCase().includes(texto))
       );
     }
@@ -121,8 +121,9 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
     const isDark = this.isDarkMode();
     const textColor = isDark ? '#94a3b8' : '#64748b';
     const gridColor = isDark ? '#1e293b' : '#f1f5f9';
+    const borderColor = isDark ? '#0b1120' : '#ffffff';
 
-    // 1. DATA GRÁFICO DE LÍNEAS (Ingresos por Día)
+    // 1. DATA LÍNEAS
     const exitosos = pedidos.filter(p => ['Aprobado - Por Preparar', 'En Camino', 'Entregado'].includes(p.estado_operativo));
     const ventasPorDia: any = {};
     exitosos.forEach(p => {
@@ -130,7 +131,7 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
       ventasPorDia[fecha] = (ventasPorDia[fecha] || 0) + p.monto_total;
     });
 
-    // 2. DATA GRÁFICO DOUGHNUT (Distribución de Estados)
+    // 2. DATA DOUGHNUT
     let aprobadas = 0, pendientes = 0, rechazadas = 0;
     pedidos.forEach(p => {
       if (['Aprobado - Por Preparar', 'En Camino', 'Entregado'].includes(p.estado_operativo)) aprobadas++;
@@ -138,7 +139,7 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
       else pendientes++;
     });
 
-    // 3. DATA GRÁFICO BARRAS (Top Productos)
+    // 3. DATA BARRAS
     const conteoProductos: any = {};
     exitosos.forEach(p => {
       (p.detalles || []).forEach((d: any) => {
@@ -148,26 +149,42 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
     });
     const topProdArray = Object.entries(conteoProductos).sort(([,a]:any, [,b]:any) => b - a).slice(0, 5);
 
-    // DESTRUIR INSTANCIAS PREVIAS
     if (this.graficoVentas) this.graficoVentas.destroy();
     if (this.graficoEstados) this.graficoEstados.destroy();
     if (this.graficoTop) this.graficoTop.destroy();
 
-    // RENDER LÍNEAS
     this.graficoVentas = new Chart(document.getElementById('ventasChart') as HTMLCanvasElement, {
       type: 'line',
       data: { labels: Object.keys(ventasPorDia).reverse(), datasets: [{ label: 'Ventas ($)', data: Object.values(ventasPorDia).reverse(), borderColor: '#4F46E5', backgroundColor: 'rgba(79, 70, 229, 0.1)', borderWidth: 3, fill: true, tension: 0.4 }] },
       options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: gridColor }, ticks: { color: textColor } }, x: { grid: { display: false }, ticks: { color: textColor } } } }
     });
 
-    // RENDER DOUGHNUT
+    // Gráfico de Distribución Ultra-Pro
     this.graficoEstados = new Chart(document.getElementById('estadosChart') as HTMLCanvasElement, {
       type: 'doughnut',
-      data: { labels: ['Aprobadas', 'Pendientes', 'Rechazadas'], datasets: [{ data: [aprobadas, pendientes, rechazadas], backgroundColor: ['#10B981', '#F59E0B', '#EF4444'], borderWidth: 0 }] },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: textColor, padding: 20 } } }, cutout: '75%' }
+      data: { 
+        labels: ['Aprobadas', 'Pendientes', 'Rechazadas'], 
+        datasets: [{ 
+          data: [aprobadas, pendientes, rechazadas], 
+          backgroundColor: ['#10B981', '#F59E0B', '#F43F5E'], 
+          borderWidth: 4, 
+          borderColor: borderColor,
+          hoverOffset: 6
+        }] 
+      },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false, 
+        cutout: '80%', // Anillo más delgado y elegante
+        plugins: { 
+          legend: { 
+            position: 'bottom', 
+            labels: { usePointStyle: true, padding: 25, color: textColor, font: { family: 'sans-serif', weight: 'bold', size: 11 } } 
+          } 
+        } 
+      }
     });
 
-    // RENDER BARRAS
     this.graficoTop = new Chart(document.getElementById('topProductosChart') as HTMLCanvasElement, {
       type: 'bar',
       data: { labels: topProdArray.map(p => p[0]), datasets: [{ label: 'Ingresos ($)', data: topProdArray.map(p => p[1]), backgroundColor: ['#4F46E5', '#6366F1', '#818CF8', '#A5B4FC', '#C7D2FE'], borderRadius: 6 }] },
@@ -181,22 +198,19 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
     this.filtroEstado.set('Todos');
     this.filtroTexto.set('');
     
-    // Inicializar Flatpickr después de que el modal se renderice en el DOM
     setTimeout(() => {
       this.datePickerInstance = flatpickr('#rango-fechas', {
         mode: 'range',
         dateFormat: 'Y-m-d',
-        // ¡Se eliminó la línea del placeholder!
+        altInput: true, // Esto crea un input visualmente hermoso
+        altFormat: 'M j, Y', // Formato de lectura premium (Ej: Aug 25, 2026)
         onChange: (selectedDates) => {
-          const input = document.getElementById('rango-fechas');
           if (selectedDates.length === 2) {
             this.fechaInicio.set(selectedDates[0].toISOString());
             this.fechaFin.set(selectedDates[1].toISOString());
-            input?.classList.add('border-indigo-500', 'ring-2', 'ring-indigo-500/20');
           } else if (selectedDates.length === 0) {
             this.fechaInicio.set('');
             this.fechaFin.set('');
-            input?.classList.remove('border-indigo-500', 'ring-2', 'ring-indigo-500/20');
           }
         }
       });
@@ -208,10 +222,15 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
     });
   }
 
-  limpiarFechas() {
-    if(this.datePickerInstance) this.datePickerInstance.clear();
-  }
-
+  limpiarFechas() { if(this.datePickerInstance) { this.datePickerInstance.clear(); this.fechaInicio.set(''); this.fechaFin.set(''); } }
   cerrarHistorial() { this.modalHistorialAbierto.set(false); }
   formatPrice(price: number): string { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(price); }
+  
+  // Utilidad para calcular 45 mins de entrega
+  getTiempoEstimado(fechaStr: string): string {
+    if (!fechaStr) return '--';
+    const d = new Date(fechaStr);
+    d.setMinutes(d.getMinutes() + 45);
+    return d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+  }
 }
