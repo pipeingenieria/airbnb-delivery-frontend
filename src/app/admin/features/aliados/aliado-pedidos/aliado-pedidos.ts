@@ -59,6 +59,30 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
   filtroEstado = signal<string>('Todos');
   fechaInicio = signal<string>('');
   fechaFin = signal<string>('');
+  // --- NUEVAS SEÑALES DE PAGINACIÓN ---
+  paginaActual = signal<number>(1);
+  itemsPorPagina = signal<number>(10);
+
+  // Rebanamos los datos filtrados para mostrar solo los de la página actual
+  pedidosPaginados = computed(() => {
+    const filtrados = this.pedidosFiltrados();
+    const inicio = (this.paginaActual() - 1) * this.itemsPorPagina();
+    return filtrados.slice(inicio, inicio + this.itemsPorPagina());
+  });
+
+  totalPaginas = computed(() => {
+    return Math.ceil(this.pedidosFiltrados().length / this.itemsPorPagina()) || 1;
+  });
+
+  cambiarPagina(delta: number) {
+    const nueva = this.paginaActual() + delta;
+    if (nueva >= 1 && nueva <= this.totalPaginas()) this.paginaActual.set(nueva);
+  }
+
+  cambiarItemsPorPagina(e: any) {
+    this.itemsPorPagina.set(Number(e.target.value));
+    this.paginaActual.set(1);
+  }
   
   graficoVentas: any;
   graficoEstados: any;

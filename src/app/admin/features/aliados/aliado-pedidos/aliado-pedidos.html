@@ -9,9 +9,24 @@
   <div class="sticky top-0 z-40 border-b shadow-md"
        [ngClass]="isDarkMode() ? 'bg-[#0B1120] border-zinc-800' : 'bg-white border-gray-200'">
     <div class="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between">
+      
+      <div class="flex items-center gap-4">
+        <button (click)="volverAlCatalogo()" class="p-2 rounded-xl border transition-colors" [ngClass]="isDarkMode() ? 'bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        </button>
+        <div>
+          <div class="flex items-center gap-3 mb-1">
+            <div class="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Sistema KDS Activo
+            </div>
+          </div>
+          <h1 class="text-2xl font-black tracking-tight" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">Centro de Pedidos en Vivo</h1>
+        </div>
+      </div>
+
       <!-- Botones de Acción (Header) -->
       <div class="flex items-center gap-4">
-        <!-- NUEVO BOTÓN: Dashboard Histórico -->
+        <!-- BOTÓN: Dashboard Histórico -->
         <button (click)="abrirHistorial()" class="hidden sm:flex px-4 py-2.5 rounded-xl border font-bold text-sm transition-all items-center gap-2 shadow-sm hover:shadow-md"
                 [ngClass]="isDarkMode() ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20' : 'bg-white border-indigo-200 text-indigo-600 hover:bg-indigo-50'">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
@@ -57,7 +72,6 @@
                   {{ pedido.estado_operativo === 'Aprobado - Por Preparar' ? 'Cocina / Preparando' : 'En Camino' }}
                 </span>
                 <h3 class="text-2xl font-black leading-none" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">#ORD-{{ pedido.id }}</h3>
-                <!-- AQUÍ IMPRIMIMOS EL NOMBRE Y DIRECCIÓN REAL -->
                 <p class="text-sm font-bold mt-2" [ngClass]="isDarkMode() ? 'text-zinc-300' : 'text-gray-800'">📍 {{ pedido.propiedad?.nombre || 'Propiedad ' + pedido.propiedad_id }}</p>
                 <p class="text-xs font-semibold mt-0.5" [ngClass]="isDarkMode() ? 'text-zinc-500' : 'text-gray-500'">{{ pedido.propiedad?.direccion_apto || 'Sin dirección registrada' }}</p>
               </div>
@@ -69,7 +83,6 @@
                 @for (item of pedido.detalles; track item.id) {
                   <li class="flex items-start gap-3 p-2 rounded-xl transition-colors border border-transparent" [ngClass]="isDarkMode() ? 'hover:bg-zinc-900 hover:border-zinc-800' : 'hover:bg-gray-50 hover:border-gray-100'">
                     
-                    <!-- Imagen del Producto -->
                     <div class="relative w-12 h-12 shrink-0 rounded-lg overflow-hidden border shadow-sm" [ngClass]="isDarkMode() ? 'border-zinc-700 bg-zinc-800' : 'border-gray-200 bg-gray-100'">
                       @if (item.item?.imagen_url) {
                         <img [src]="item.item.imagen_url" class="w-full h-full object-cover">
@@ -78,13 +91,11 @@
                       }
                     </div>
 
-                    <!-- Datos del Producto -->
                     <div class="flex-1 min-w-0 pt-0.5">
                       <div class="flex justify-between items-start gap-2">
                         <p class="font-bold text-[13px] leading-tight pr-2" [ngClass]="isDarkMode() ? 'text-zinc-200' : 'text-gray-800'">
                           {{ item.item?.nombre || 'Producto ' + item.item_id }}
                         </p>
-                        <!-- Cantidad -->
                         <span class="flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded text-xs font-black shrink-0 border"
                               [ngClass]="isDarkMode() ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-white border-gray-300 text-gray-900 shadow-sm'">
                           x{{ item.cantidad }}
@@ -159,16 +170,16 @@
               }
             </div>
 
-            <!-- Buscador Universal -->
+            <!-- Buscador Universal con reset de página -->
             <div class="md:col-span-4 relative">
-              <input type="text" [ngModel]="filtroTexto()" (ngModelChange)="filtroTexto.set($event)" placeholder="Buscar casa, MP, referencia..." class="w-full pl-11 pr-4 py-3 rounded-xl border text-sm font-semibold focus:outline-none focus:border-indigo-500 transition-colors shadow-sm" [ngClass]="isDarkMode() ? 'bg-slate-950/80 border-slate-700 text-white placeholder-slate-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'">
+              <input type="text" [ngModel]="filtroTexto()" (ngModelChange)="filtroTexto.set($event); paginaActual.set(1)" placeholder="Buscar casa, MP, referencia..." class="w-full pl-11 pr-4 py-3 rounded-xl border text-sm font-semibold focus:outline-none focus:border-indigo-500 transition-colors shadow-sm" [ngClass]="isDarkMode() ? 'bg-slate-950/80 border-slate-700 text-white placeholder-slate-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'">
               <svg class="w-5 h-5 absolute left-4 top-3.5" [ngClass]="isDarkMode() ? 'text-slate-500' : 'text-gray-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             </div>
 
-            <!-- Píldoras de Estado -->
+            <!-- Píldoras de Estado con reset de página -->
             <div class="md:col-span-5 flex p-1.5 rounded-xl shadow-sm border overflow-hidden" [ngClass]="isDarkMode() ? 'bg-slate-950 border-slate-700' : 'bg-gray-100 border-gray-300'">
               @for (estado of ['Todos', 'Completados', 'Pendientes', 'Rechazados']; track estado) {
-                <button (click)="filtroEstado.set(estado)" class="flex-1 py-1.5 text-sm font-bold transition-all rounded-lg"
+                <button (click)="filtroEstado.set(estado); paginaActual.set(1)" class="flex-1 py-1.5 text-sm font-bold transition-all rounded-lg"
                         [ngClass]="filtroEstado() === estado ? 'bg-indigo-600 text-white shadow-md' : (isDarkMode() ? 'text-slate-400 hover:text-white' : 'text-gray-600 hover:bg-white')">
                   {{ estado }}
                 </button>
@@ -202,7 +213,7 @@
               </div>
             </div>
 
-            <!-- TABLA CENTRAL A TODO LO ANCHO -->
+            <!-- TABLA CENTRAL A TODO LO ANCHO CON PAGINACIÓN -->
             <div class="col-span-full rounded-3xl border overflow-hidden shadow-sm mb-10" [ngClass]="isDarkMode() ? 'bg-slate-900/30 border-slate-800' : 'bg-white border-gray-200'">
               <div class="px-6 py-4 border-b" [ngClass]="isDarkMode() ? 'border-slate-800 bg-slate-900' : 'border-gray-200 bg-gray-50'">
                 <h3 class="font-bold text-lg" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">Detalle de Órdenes</h3>
@@ -220,7 +231,8 @@
                     </tr>
                   </thead>
                   <tbody class="divide-y text-sm font-semibold" [ngClass]="isDarkMode() ? 'divide-slate-800/50 text-slate-300' : 'divide-gray-100 text-gray-700'">
-                    @for (orden of pedidosFiltrados(); track orden.id) {
+                    <!-- ITERANDO SOBRE pedidosPaginados() -->
+                    @for (orden of pedidosPaginados(); track orden.id) {
                       <tr class="transition-colors group" [ngClass]="isDarkMode() ? 'hover:bg-slate-800/30' : 'hover:bg-gray-50'">
                         <td class="px-6 py-4">
                           <span class="font-black block" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">#ORD-{{ orden.id }}</span>
@@ -268,25 +280,50 @@
                   </tbody>
                 </table>
               </div>
+
+              <!-- FOOTER DE PAGINACIÓN -->
+              <div class="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4" [ngClass]="isDarkMode() ? 'bg-slate-900 border-slate-800' : 'bg-gray-50 border-gray-200'">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold uppercase tracking-widest" [ngClass]="isDarkMode() ? 'text-slate-500' : 'text-gray-500'">Mostrar:</span>
+                  <select (change)="cambiarItemsPorPagina($event)" class="text-sm font-bold bg-transparent outline-none cursor-pointer" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">
+                    <option value="10">10 órdenes</option>
+                    <option value="20">20 órdenes</option>
+                    <option value="50">50 órdenes</option>
+                    <option value="100">100 órdenes</option>
+                  </select>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                  <span class="text-xs font-bold" [ngClass]="isDarkMode() ? 'text-slate-400' : 'text-gray-500'">
+                    Página <span [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">{{ paginaActual() }}</span> de {{ totalPaginas() }}
+                  </span>
+                  <div class="flex gap-2">
+                    <button (click)="cambiarPagina(-1)" [disabled]="paginaActual() === 1" class="p-2 rounded-lg border transition-colors disabled:opacity-30 disabled:cursor-not-allowed" [ngClass]="isDarkMode() ? 'border-slate-700 bg-slate-800 text-white hover:bg-slate-700' : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-100'">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path></svg>
+                    </button>
+                    <button (click)="cambiarPagina(1)" [disabled]="paginaActual() === totalPaginas()" class="p-2 rounded-lg border transition-colors disabled:opacity-30 disabled:cursor-not-allowed" [ngClass]="isDarkMode() ? 'border-slate-700 bg-slate-800 text-white hover:bg-slate-700' : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-100'">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
             </div>
 
             <!-- GRÁFICOS INFERIORES -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <!-- Gráfico de Líneas -->
               <div class="p-6 rounded-3xl border shadow-sm" [ngClass]="isDarkMode() ? 'bg-slate-900/30 border-slate-800' : 'bg-white border-gray-200'">
                 <h3 class="font-bold text-sm mb-6 uppercase tracking-widest" [ngClass]="isDarkMode() ? 'text-slate-500' : 'text-gray-500'">Curva de Ingresos</h3>
                 <div class="w-full h-[220px] relative"><canvas id="ventasChart"></canvas></div>
               </div>
               
-              <!-- Gráfico de Dona -->
               <div class="p-6 rounded-3xl border shadow-sm flex flex-col items-center" [ngClass]="isDarkMode() ? 'bg-slate-900/30 border-slate-800' : 'bg-white border-gray-200'">
                 <h3 class="font-bold text-sm mb-2 w-full text-center uppercase tracking-widest" [ngClass]="isDarkMode() ? 'text-slate-500' : 'text-gray-500'">Distribución Operativa</h3>
                 <div class="w-full h-[220px] relative"><canvas id="estadosChart"></canvas></div>
               </div>
 
-              <!-- Gráfico de Barras -->
               <div class="p-6 rounded-3xl border shadow-sm" [ngClass]="isDarkMode() ? 'bg-slate-900/30 border-slate-800' : 'bg-white border-gray-200'">
-                <h3 class="font-bold text-sm mb-6 uppercase tracking-widest" [ngClass]="isDarkMode() ? 'text-slate-500' : 'text-gray-500'">Top Productos Vencidos</h3>
+                <h3 class="font-bold text-sm mb-6 uppercase tracking-widest" [ngClass]="isDarkMode() ? 'text-slate-500' : 'text-gray-500'">Top Productos Vendidos</h3>
                 <div class="w-full h-[220px] relative"><canvas id="topProductosChart"></canvas></div>
               </div>
             </div>
