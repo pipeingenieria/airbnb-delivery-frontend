@@ -126,49 +126,53 @@
       <div class="w-full max-w-7xl border rounded-[2rem] shadow-[0_0_60px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col max-h-[95vh]" 
            [ngClass]="isDarkMode() ? 'bg-[#0B1120] border-slate-800' : 'bg-white border-gray-200'">
         
-        <!-- CABECERA DEL MODAL CON FECHAS Y BÚSQUEDA -->
-        <div class="px-8 py-5 flex flex-col xl:flex-row xl:items-center justify-between border-b gap-4 shrink-0 relative" [ngClass]="isDarkMode() ? 'bg-slate-900/80 border-slate-800' : 'bg-gray-50 border-gray-200'">
-          <div>
-            <h2 class="text-3xl font-black flex items-center gap-3 tracking-tight" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">
-              <span class="p-2.5 rounded-2xl" [ngClass]="isDarkMode() ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' : 'bg-indigo-100 text-indigo-600 border border-indigo-200'">
-                <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"></path></svg>
-              </span>
-              Inteligencia Comercial
-            </h2>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-3 relative z-10">
-            <!-- Rango de Fechas -->
-            <div class="flex items-center gap-2 p-1.5 rounded-xl border" [ngClass]="isDarkMode() ? 'bg-slate-950 border-slate-700' : 'bg-white border-gray-300'">
-              <input type="date" [ngModel]="fechaInicio()" (ngModelChange)="fechaInicio.set($event)" class="bg-transparent text-sm font-semibold outline-none px-2" [ngClass]="isDarkMode() ? 'text-slate-300' : 'text-gray-700'">
-              <span class="text-slate-500 font-black">-</span>
-              <input type="date" [ngModel]="fechaFin()" (ngModelChange)="fechaFin.set($event)" class="bg-transparent text-sm font-semibold outline-none px-2" [ngClass]="isDarkMode() ? 'text-slate-300' : 'text-gray-700'">
+        <!-- CABECERA Y FILTROS -->
+        <div class="p-6 sm:p-8 flex flex-col gap-6 border-b shrink-0 relative overflow-hidden" [ngClass]="isDarkMode() ? 'bg-slate-900/50 border-slate-800' : 'bg-gray-50 border-gray-200'">
+          <div class="absolute top-0 right-0 w-96 h-full bg-gradient-to-l from-indigo-500/10 to-transparent pointer-events-none"></div>
+          
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-3xl font-black flex items-center gap-3 tracking-tight" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">
+                <span class="p-2.5 rounded-2xl" [ngClass]="isDarkMode() ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' : 'bg-indigo-100 text-indigo-600 border border-indigo-200'">
+                  <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"></path></svg>
+                </span>
+                Inteligencia Comercial
+              </h2>
             </div>
-
-            <!-- Buscador -->
-            <div class="relative w-64 hidden sm:block">
-              <input type="text" [ngModel]="filtroTexto()" (ngModelChange)="filtroTexto.set($event)" placeholder="Ref MercadoPago, Apto, Producto..." class="w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm font-semibold focus:outline-none focus:border-indigo-500 transition-colors shadow-inner" [ngClass]="isDarkMode() ? 'bg-slate-950/80 border-slate-700 text-white placeholder-slate-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'">
-              <svg class="w-4 h-4 absolute left-3.5 top-3.5" [ngClass]="isDarkMode() ? 'text-slate-500' : 'text-gray-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            </div>
-            
-            <button (click)="cerrarHistorial()" class="p-2.5 rounded-xl transition-colors border" [ngClass]="isDarkMode() ? 'bg-slate-800 border-slate-700 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/30 text-slate-400' : 'bg-white border-gray-200 hover:bg-rose-50 hover:text-rose-500 text-gray-500'">
+            <button (click)="cerrarHistorial()" class="absolute top-6 right-6 p-2.5 rounded-xl transition-colors border z-20" [ngClass]="isDarkMode() ? 'bg-slate-800 border-slate-700 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/30 text-slate-400' : 'bg-white border-gray-200 hover:bg-rose-50 hover:text-rose-500 text-gray-500'">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
           </div>
+
+          <!-- BARRA DE CONTROLES (Estilo BotCompany) -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
+            <!-- Selector Flatpickr -->
+            <div class="relative">
+              <input id="rango-fechas" type="text" placeholder="Filtrar por fecha..." class="w-full pl-4 pr-10 py-3 rounded-xl border text-sm font-semibold transition-all shadow-sm" [ngClass]="isDarkMode() ? 'bg-slate-950/80 border-slate-700 text-white placeholder-slate-500' : 'bg-white border-gray-300 text-gray-900'">
+              <button (click)="limpiarFechas()" class="absolute inset-y-0 right-2 flex items-center p-2 text-slate-400 hover:text-rose-500 transition-colors">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+            </div>
+
+            <!-- Buscador Universal -->
+            <div class="relative">
+              <input type="text" [ngModel]="filtroTexto()" (ngModelChange)="filtroTexto.set($event)" placeholder="Referencia, MP, Apto, Producto..." class="w-full pl-10 pr-4 py-3 rounded-xl border text-sm font-semibold focus:outline-none focus:border-indigo-500 transition-colors shadow-sm" [ngClass]="isDarkMode() ? 'bg-slate-950/80 border-slate-700 text-white placeholder-slate-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'">
+              <svg class="w-4 h-4 absolute left-3.5 top-3.5" [ngClass]="isDarkMode() ? 'text-slate-500' : 'text-gray-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+
+            <!-- Píldoras de Estado -->
+            <div class="flex p-1 rounded-xl shadow-sm border overflow-hidden" [ngClass]="isDarkMode() ? 'bg-slate-950 border-slate-700' : 'bg-gray-100 border-gray-300'">
+              @for (estado of ['Todos', 'Completados', 'Pendientes', 'Rechazados']; track estado) {
+                <button (click)="filtroEstado.set(estado)" class="flex-1 py-1.5 text-xs font-bold transition-all rounded-lg"
+                        [ngClass]="filtroEstado() === estado ? 'bg-indigo-600 text-white shadow-md' : (isDarkMode() ? 'text-slate-400 hover:text-white' : 'text-gray-600 hover:bg-white')">
+                  {{ estado }}
+                </button>
+              }
+            </div>
+          </div>
         </div>
 
-        <!-- PÍLDORAS DE ESTADO -->
-        <div class="px-8 py-3 border-b flex overflow-x-auto no-scrollbar gap-2 shrink-0" [ngClass]="isDarkMode() ? 'bg-slate-950/50 border-slate-800' : 'bg-gray-100 border-gray-200'">
-          @for (estado of ['Todos', 'Completados', 'Pendientes', 'Rechazados']; track estado) {
-            <button (click)="filtroEstado.set(estado)" 
-                    class="px-5 py-2 rounded-lg text-sm font-bold transition-all shrink-0 border"
-                    [ngClass]="filtroEstado() === estado ? (isDarkMode() ? 'bg-indigo-600 text-white border-indigo-500 shadow-[0_0_15px_rgba(79,70,229,0.3)]' : 'bg-indigo-600 text-white border-indigo-700 shadow-md') : (isDarkMode() ? 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50')">
-              {{ estado }}
-            </button>
-          }
-        </div>
-
-        <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+        <div class="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
           @if (cargandoHistorial()) {
             <div class="flex justify-center items-center h-64"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div></div>
           } @else {
@@ -188,53 +192,52 @@
                 <p class="text-3xl sm:text-4xl font-black tracking-tighter" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">{{ metricas().entregados }} <span class="text-lg text-slate-500 font-medium">/ {{ metricas().total }}</span></p>
               </div>
               <div class="p-6 rounded-3xl border" [ngClass]="isDarkMode() ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200 shadow-sm'">
-                <h4 class="text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2" [ngClass]="isDarkMode() ? 'text-slate-500' : 'text-gray-500'">Rechazos / Cancelaciones</h4>
-                <p class="text-3xl sm:text-4xl font-black tracking-tighter" [ngClass]="isDarkMode() ? 'text-rose-400' : 'text-rose-600'">{{ metricas().rechazados }} <span class="text-lg text-slate-500 font-medium">({{ metricas().tasaRechazo }}%)</span></p>
+                <h4 class="text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2" [ngClass]="isDarkMode() ? 'text-slate-500' : 'text-gray-500'">Tasa de Rechazo</h4>
+                <p class="text-3xl sm:text-4xl font-black tracking-tighter" [ngClass]="isDarkMode() ? 'text-rose-400' : 'text-rose-600'">{{ metricas().tasaRechazo }}%</p>
               </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              
-              <!-- ÁREA GRÁFICA PROFESIONAL -->
-              <div class="lg:col-span-12 rounded-3xl border p-6" [ngClass]="isDarkMode() ? 'bg-slate-900/30 border-slate-800' : 'bg-white border-gray-200 shadow-sm'">
-                <h3 class="text-sm font-bold uppercase tracking-widest mb-4 flex items-center gap-2" [ngClass]="isDarkMode() ? 'text-slate-400' : 'text-gray-500'">Rendimiento de Facturación</h3>
-                <div class="w-full h-64 relative"><canvas id="ventasChart"></canvas></div>
+            <!-- GRILLA DE GRÁFICOS (ESTILO BOTCOMPANY) -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              <!-- Gráfico de Líneas (Ocupa 2 columnas) -->
+              <div class="lg:col-span-2 p-6 rounded-3xl border shadow-inner" [ngClass]="isDarkMode() ? 'bg-slate-900/30 border-slate-800' : 'bg-white border-gray-200'">
+                <h3 class="font-bold text-lg mb-4" [ngClass]="isDarkMode() ? 'text-slate-200' : 'text-gray-800'">Rendimiento de Ventas</h3>
+                <div class="w-full h-[300px] relative"><canvas id="ventasChart"></canvas></div>
               </div>
+              <!-- Gráfico de Dona -->
+              <div class="p-6 rounded-3xl border shadow-inner flex flex-col justify-center items-center" [ngClass]="isDarkMode() ? 'bg-slate-900/30 border-slate-800' : 'bg-white border-gray-200'">
+                <h3 class="font-bold text-lg mb-4 w-full text-center" [ngClass]="isDarkMode() ? 'text-slate-200' : 'text-gray-800'">Distribución de Órdenes</h3>
+                <div class="w-full h-[250px] relative"><canvas id="estadosChart"></canvas></div>
+              </div>
+            </div>
 
-              <!-- TABLA DE DETALLE (CON MERCADOPAGO ID Y ACORDEÓN) -->
-              <div class="lg:col-span-12 space-y-4">
-                <div class="rounded-3xl border overflow-hidden shadow-inner" [ngClass]="isDarkMode() ? 'bg-slate-900/30 border-slate-800' : 'bg-white border-gray-200'">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <!-- Gráfico de Barras Horizontales -->
+              <div class="p-6 rounded-3xl border shadow-inner" [ngClass]="isDarkMode() ? 'bg-slate-900/30 border-slate-800' : 'bg-white border-gray-200'">
+                <h3 class="font-bold text-lg mb-4" [ngClass]="isDarkMode() ? 'text-slate-200' : 'text-gray-800'">Top 5 Productos del Periodo</h3>
+                <div class="w-full h-[250px] relative"><canvas id="topProductosChart"></canvas></div>
+              </div>
+              
+              <!-- BITÁCORA DE DETALLE -->
+              <div class="p-6 rounded-3xl border shadow-inner flex flex-col" [ngClass]="isDarkMode() ? 'bg-slate-900/30 border-slate-800' : 'bg-white border-gray-200'">
+                <h3 class="font-bold text-lg mb-4" [ngClass]="isDarkMode() ? 'text-slate-200' : 'text-gray-800'">Detalle de Órdenes</h3>
+                <div class="overflow-y-auto flex-1 max-h-[250px] custom-scrollbar rounded-xl border" [ngClass]="isDarkMode() ? 'border-slate-800' : 'border-gray-200'">
                   <table class="w-full text-left border-collapse">
-                    <thead>
-                      <tr class="text-[10px] uppercase tracking-widest border-b" [ngClass]="isDarkMode() ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-gray-50 border-gray-200 text-gray-500'">
-                        <th class="px-6 py-4 font-bold">Referencia Interna / MP</th>
-                        <th class="px-6 py-4 font-bold">Destino (Apto)</th>
-                        <th class="px-6 py-4 font-bold">Productos</th>
-                        <th class="px-6 py-4 font-bold text-right">Monto</th>
-                        <th class="px-6 py-4 font-bold text-center">Estado</th>
+                    <thead class="sticky top-0 z-10" [ngClass]="isDarkMode() ? 'bg-slate-950 border-slate-800' : 'bg-gray-100 border-gray-200'">
+                      <tr class="text-[10px] uppercase tracking-widest border-b text-slate-500">
+                        <th class="px-4 py-3 font-bold">Referencia / MP</th>
+                        <th class="px-4 py-3 font-bold">Productos</th>
+                        <th class="px-4 py-3 font-bold text-right">Monto</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y text-sm font-semibold" [ngClass]="isDarkMode() ? 'divide-slate-800/50 text-slate-300' : 'divide-gray-100 text-gray-700'">
                       @for (orden of pedidosFiltrados(); track orden.id) {
                         <tr class="transition-colors group" [ngClass]="isDarkMode() ? 'hover:bg-slate-800/30' : 'hover:bg-gray-50'">
-                          
-                          <!-- REFERENCIAS Y FECHA -->
-                          <td class="px-6 py-5 align-top">
-                            <span class="font-black block" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">#ORD-{{ orden.id }}</span>
-                            @if (orden.liquidacion?.gateway_tx_id) {
-                              <span class="text-[10px] font-mono px-1.5 py-0.5 mt-1 rounded bg-blue-500/10 text-blue-500 border border-blue-500/20 inline-block">MP: {{ orden.liquidacion.gateway_tx_id }}</span>
-                            }
-                            <span class="text-[10px] font-medium opacity-60 mt-1 block">{{ orden.creado_en | date:'MMM d, h:mm a' }}</span>
+                          <td class="px-4 py-3">
+                            <span class="font-black block" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">#{{ orden.id }}</span>
+                            @if (orden.liquidacion?.gateway_tx_id) { <span class="text-[10px] font-mono text-blue-500">MP: {{ orden.liquidacion.gateway_tx_id }}</span> }
                           </td>
-                          
-                          <!-- DESTINO -->
-                          <td class="px-6 py-5 align-top">
-                            <span class="block font-bold">{{ orden.propiedad?.nombre || 'Desconocido' }}</span>
-                            <span class="text-[10px] font-medium opacity-60 mt-0.5 block truncate max-w-[150px]">{{ orden.propiedad?.direccion_apto }}</span>
-                          </td>
-                          
-                          <!-- ACORDEÓN DE PRODUCTOS (YA CON LA DATA REAL) -->
-                          <td class="px-6 py-5 align-top max-w-[220px]">
+                          <td class="px-4 py-3 max-w-[150px]">
                             <details class="cursor-pointer group/details [&_summary::-webkit-details-marker]:hidden">
                               <summary class="font-bold text-indigo-500 flex items-center gap-1 hover:text-indigo-400 text-xs">
                                 <svg class="w-3 h-3 transition-transform group-open/details:rotate-90" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
@@ -242,38 +245,24 @@
                               </summary>
                               <ul class="mt-2 space-y-1.5 border-l-2 pl-3" [ngClass]="isDarkMode() ? 'border-slate-700' : 'border-gray-200'">
                                 @for (prod of orden.detalles; track prod.id) {
-                                  <li class="text-[11px] leading-tight">
-                                    <span class="font-black text-emerald-500">x{{ prod.cantidad }}</span> 
-                                    <span class="opacity-90 ml-1">{{ prod.item?.nombre || 'Producto' }}</span>
-                                  </li>
+                                  <li class="text-[10px] leading-tight truncate"><span class="font-black text-emerald-500">x{{ prod.cantidad }}</span> <span class="opacity-90 ml-1">{{ prod.item?.nombre }}</span></li>
                                 }
                               </ul>
                             </details>
                           </td>
-                          
-                          <!-- MONTO Y ESTADO -->
-                          <td class="px-6 py-5 align-top text-right font-black" [ngClass]="isDarkMode() ? 'text-emerald-400' : 'text-emerald-600'">{{ formatPrice(orden.monto_total) }}</td>
-                          <td class="px-6 py-5 align-top text-center">
-                            <span class="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest inline-block border shadow-sm"
-                                  [ngClass]="{
-                                    'bg-emerald-500/10 text-emerald-400 border-emerald-500/20': orden.estado_operativo === 'Entregado' || orden.estado_operativo === 'Aprobado - Por Preparar' || orden.estado_operativo === 'En Camino',
-                                    'bg-rose-500/10 text-rose-400 border-rose-500/20': orden.estado_operativo === 'Rechazado' || orden.estado_operativo === 'Cancelado',
-                                    'bg-amber-500/10 text-amber-500 border-amber-500/20': orden.estado_operativo === 'Pendiente Pago' || orden.estado_operativo === 'Pendiente' || orden.estado_operativo === 'Creado'
-                                  }">
-                              {{ orden.estado_operativo }}
-                            </span>
+                          <td class="px-4 py-3 text-right font-black" [ngClass]="isDarkMode() ? 'text-emerald-400' : 'text-emerald-600'">
+                            {{ formatPrice(orden.monto_total) }}
+                            <div class="text-[9px] mt-1 uppercase" [ngClass]="{'text-emerald-500': orden.estado_operativo === 'Entregado' || orden.estado_operativo === 'Aprobado - Por Preparar', 'text-rose-500': orden.estado_operativo === 'Rechazado', 'text-amber-500': orden.estado_operativo === 'Pendiente'}">{{ orden.estado_operativo }}</div>
                           </td>
                         </tr>
                       }
-                      @if (pedidosFiltrados().length === 0) {
-                        <tr><td colspan="5" class="px-6 py-12 text-center text-sm font-semibold opacity-50">No hay coincidencias con los filtros actuales.</td></tr>
-                      }
+                      @if (pedidosFiltrados().length === 0) { <tr><td colspan="3" class="px-4 py-8 text-center text-xs opacity-50">Sin resultados.</td></tr> }
                     </tbody>
                   </table>
                 </div>
               </div>
-
             </div>
+
           }
         </div>
       </div>

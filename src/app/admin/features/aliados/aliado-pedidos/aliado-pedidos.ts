@@ -2,9 +2,10 @@ import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { FormsModule } from '@angular/forms'; 
-import Chart from 'chart.js/auto'; // <-- Añade esta línea EN LOS IMPORTS HASTA ARRIBA DEL ARCHIVO
-import { environment } from '../../../../../environments/environment'; 
+import { FormsModule } from '@angular/forms';
+import { environment } from '../../../../../environments/environment';
+import Chart from 'chart.js/auto';
+import flatpickr from 'flatpickr'; // <-- Importación directa de la librería
 
 @Component({
   selector: 'app-aliado-pedidos',
@@ -14,6 +15,7 @@ import { environment } from '../../../../../environments/environment';
   styleUrls: ['./aliado-pedidos.scss'] 
 })
 export class AliadoPedidosComponent implements OnInit, OnDestroy {
+  // ... (Deja tu lógica existente de ngOnInit, toggleTheme, cargarPedidos, cambiarEstado intacta) ...
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private http = inject(HttpClient);
@@ -28,69 +30,49 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.route.paramMap.subscribe(params => {
       this.token = params.get('token') || '';
-      if (this.token) {
-        this.cargarPedidos();
-        this.iniciarAutoRecarga();
-      }
+      if (this.token) { this.cargarPedidos(); this.iniciarAutoRecarga(); }
     });
   }
-
-  ngOnDestroy() {
-    if (this.pollingInterval) clearInterval(this.pollingInterval);
-  }
-
+  ngOnDestroy() { if (this.pollingInterval) clearInterval(this.pollingInterval); }
   toggleTheme() { this.isDarkMode.set(!this.isDarkMode()); }
-
   volverAlCatalogo() { this.router.navigate(['/aliado', this.token]); }
-
   cargarPedidos() {
     this.http.get(`${environment.apiUrl}/partner/live-orders/${this.token}`).subscribe({
-      next: (res: any) => {
-        if (res.ok) this.pedidosActivos.set(res.pedidos);
-        this.cargando.set(false);
-      },
+      next: (res: any) => { if (res.ok) this.pedidosActivos.set(res.pedidos); this.cargando.set(false); },
       error: () => this.cargando.set(false)
     });
   }
-
-  iniciarAutoRecarga() {
-    this.pollingInterval = setInterval(() => { this.cargarPedidos(); }, 15000);
-  }
-
+  iniciarAutoRecarga() { this.pollingInterval = setInterval(() => { this.cargarPedidos(); }, 15000); }
   cambiarEstado(pedidoId: number, nuevoEstado: string) {
     this.http.patch(`${environment.apiUrl}/partner/order/${pedidoId}/status`, { estado: nuevoEstado })
-      .subscribe((res: any) => {
-        if (res.ok) {
-          if (nuevoEstado === 'Entregado') {
-            this.pedidosActivos.update(list => list.filter(p => p.id !== pedidoId));
-          } else {
-            this.cargarPedidos();
-          }
-        }
-      });
+      .subscribe((res: any) => { if (res.ok) { if (nuevoEstado === 'Entregado') { this.pedidosActivos.update(list => list.filter(p => p.id !== pedidoId)); } else { this.cargarPedidos(); } } });
   }
 
-  // --- LÓGICA DEL DASHBOARD HISTÓRICO ULTRA-PRO ---
+  // =========================================================
+  // DASHBOARD HISTÓRICO ULTRA-PRO (BOTCOMPANY STYLE)
+  // =========================================================
   modalHistorialAbierto = signal<boolean>(false);
   historialPedidos = signal<any[]>([]);
   cargandoHistorial = signal<boolean>(false);
 
-  // Filtros Avanzados
   filtroTexto = signal<string>('');
   filtroEstado = signal<string>('Todos');
   fechaInicio = signal<string>('');
   fechaFin = signal<string>('');
   
+  // Instancias de los 3 gráficos
   graficoVentas: any;
+  graficoEstados: any;
+  graficoTop: any;
+  datePickerInstance: any;
 
   pedidosFiltrados = computed(() => {
     let filtrados = this.historialPedidos();
     const estado = this.filtroEstado();
     const texto = this.filtroTexto().toLowerCase().trim();
     const inicio = this.fechaInicio() ? new Date(this.fechaInicio()).getTime() : null;
-    const fin = this.fechaFin() ? new Date(this.fechaFin()).getTime() + 86399000 : null; // Fin del día
+    const fin = this.fechaFin() ? new Date(this.fechaFin()).getTime() + 86399000 : null; 
 
-    // 1. Filtro de Fechas
     if (inicio || fin) {
       filtrados = filtrados.filter(p => {
         const fechaPedido = new Date(p.creado_en).getTime();
@@ -100,12 +82,10 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
       });
     }
 
-    // 2. Filtro de Estados
     if (estado === 'Completados') filtrados = filtrados.filter(p => p.estado_operativo === 'Entregado');
     else if (estado === 'Pendientes') filtrados = filtrados.filter(p => ['En Camino', 'Aprobado - Por Preparar', 'Pendiente Pago', 'Creado'].includes(p.estado_operativo));
     else if (estado === 'Rechazados') filtrados = filtrados.filter(p => ['Rechazado', 'Cancelado'].includes(p.estado_operativo));
 
-    // 3. Filtro de Búsqueda (Incluye MercadoPago ID)
     if (texto) {
       filtrados = filtrados.filter(p => 
         p.id.toString().includes(texto) ||
@@ -115,86 +95,83 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
       );
     }
     
-    // Disparamos la actualización del gráfico cada vez que cambian los filtros
-    setTimeout(() => this.actualizarGrafico(filtrados), 50);
+    setTimeout(() => this.actualizarGraficos(filtrados), 50);
     return filtrados;
   });
 
   metricas = computed(() => {
     const pedidos = this.pedidosFiltrados();
-    
-    // CORRECCIÓN: "Aprobado", "En Camino" y "Entregado" YA son plata en caja.
     const estadosExitosos = ['Aprobado - Por Preparar', 'En Camino', 'Entregado'];
     const exitosos = pedidos.filter(p => estadosExitosos.includes(p.estado_operativo));
     const rechazadosArray = pedidos.filter(p => ['Rechazado', 'Cancelado'].includes(p.estado_operativo));
-    
     const ingresos = exitosos.reduce((acc, p) => acc + (p.monto_total || 0), 0);
     
-    // Top Productos
-    const conteoProductos: { [key: string]: { cantidad: number, ingresos: number } } = {};
-    exitosos.forEach(p => {
-      (p.detalles || []).forEach((d: any) => {
-        const nombre = d.item?.nombre || 'Producto Desconocido';
-        if (!conteoProductos[nombre]) conteoProductos[nombre] = { cantidad: 0, ingresos: 0 };
-        conteoProductos[nombre].cantidad += d.cantidad;
-        conteoProductos[nombre].ingresos += (d.precio_unitario * d.cantidad);
-      });
-    });
-
-    const topProductos = Object.entries(conteoProductos)
-      .map(([nombre, datos]) => ({ nombre, ...datos }))
-      .sort((a, b) => b.ingresos - a.ingresos).slice(0, 5);
-
     return {
       total: pedidos.length,
-      entregados: exitosos.length, // Ventas reales confirmadas
+      entregados: exitosos.length, 
       rechazados: rechazadosArray.length,
       ingresos: ingresos,
       ticketPromedio: exitosos.length ? ingresos / exitosos.length : 0,
       tasaRechazo: pedidos.length ? Math.round((rechazadosArray.length / pedidos.length) * 100) : 0,
-      topProductos,
-      maxIngresoProducto: topProductos.length ? topProductos[0].ingresos : 1
     };
   });
 
-  actualizarGrafico(pedidos: any[]) {
+  actualizarGraficos(pedidos: any[]) {
     if (!document.getElementById('ventasChart')) return;
-    
+    const isDark = this.isDarkMode();
+    const textColor = isDark ? '#94a3b8' : '#64748b';
+    const gridColor = isDark ? '#1e293b' : '#f1f5f9';
+
+    // 1. DATA GRÁFICO DE LÍNEAS (Ingresos por Día)
     const exitosos = pedidos.filter(p => ['Aprobado - Por Preparar', 'En Camino', 'Entregado'].includes(p.estado_operativo));
-    
-    // Agrupar ventas por día
     const ventasPorDia: any = {};
     exitosos.forEach(p => {
       const fecha = new Date(p.creado_en).toLocaleDateString('es-CO', { month: 'short', day: 'numeric' });
       ventasPorDia[fecha] = (ventasPorDia[fecha] || 0) + p.monto_total;
     });
 
-    const labels = Object.keys(ventasPorDia).reverse();
-    const data = Object.values(ventasPorDia).reverse();
+    // 2. DATA GRÁFICO DOUGHNUT (Distribución de Estados)
+    let aprobadas = 0, pendientes = 0, rechazadas = 0;
+    pedidos.forEach(p => {
+      if (['Aprobado - Por Preparar', 'En Camino', 'Entregado'].includes(p.estado_operativo)) aprobadas++;
+      else if (['Rechazado', 'Cancelado'].includes(p.estado_operativo)) rechazadas++;
+      else pendientes++;
+    });
 
+    // 3. DATA GRÁFICO BARRAS (Top Productos)
+    const conteoProductos: any = {};
+    exitosos.forEach(p => {
+      (p.detalles || []).forEach((d: any) => {
+        const nombre = d.item?.nombre || 'Desconocido';
+        conteoProductos[nombre] = (conteoProductos[nombre] || 0) + (d.precio_unitario * d.cantidad);
+      });
+    });
+    const topProdArray = Object.entries(conteoProductos).sort(([,a]:any, [,b]:any) => b - a).slice(0, 5);
+
+    // DESTRUIR INSTANCIAS PREVIAS
     if (this.graficoVentas) this.graficoVentas.destroy();
+    if (this.graficoEstados) this.graficoEstados.destroy();
+    if (this.graficoTop) this.graficoTop.destroy();
 
-    const ctx = document.getElementById('ventasChart') as HTMLCanvasElement;
-    this.graficoVentas = new Chart(ctx, {
+    // RENDER LÍNEAS
+    this.graficoVentas = new Chart(document.getElementById('ventasChart') as HTMLCanvasElement, {
       type: 'line',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: 'Ingresos ($)',
-          data: data,
-          borderColor: '#4F46E5', // Indigo 600
-          backgroundColor: 'rgba(79, 70, 229, 0.1)',
-          borderWidth: 3,
-          fill: true,
-          tension: 0.4
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true, grid: { color: this.isDarkMode() ? '#1e293b' : '#f1f5f9' } }, x: { grid: { display: false } } }
-      }
+      data: { labels: Object.keys(ventasPorDia).reverse(), datasets: [{ label: 'Ventas ($)', data: Object.values(ventasPorDia).reverse(), borderColor: '#4F46E5', backgroundColor: 'rgba(79, 70, 229, 0.1)', borderWidth: 3, fill: true, tension: 0.4 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: gridColor }, ticks: { color: textColor } }, x: { grid: { display: false }, ticks: { color: textColor } } } }
+    });
+
+    // RENDER DOUGHNUT
+    this.graficoEstados = new Chart(document.getElementById('estadosChart') as HTMLCanvasElement, {
+      type: 'doughnut',
+      data: { labels: ['Aprobadas', 'Pendientes', 'Rechazadas'], datasets: [{ data: [aprobadas, pendientes, rechazadas], backgroundColor: ['#10B981', '#F59E0B', '#EF4444'], borderWidth: 0 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: textColor, padding: 20 } } }, cutout: '75%' }
+    });
+
+    // RENDER BARRAS
+    this.graficoTop = new Chart(document.getElementById('topProductosChart') as HTMLCanvasElement, {
+      type: 'bar',
+      data: { labels: topProdArray.map(p => p[0]), datasets: [{ label: 'Ingresos ($)', data: topProdArray.map(p => p[1]), backgroundColor: ['#4F46E5', '#6366F1', '#818CF8', '#A5B4FC', '#C7D2FE'], borderRadius: 6 }] },
+      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: gridColor }, ticks: { color: textColor } }, y: { grid: { display: false }, ticks: { color: textColor } } } }
     });
   }
 
@@ -203,22 +180,38 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
     this.cargandoHistorial.set(true);
     this.filtroEstado.set('Todos');
     this.filtroTexto.set('');
-    this.fechaInicio.set('');
-    this.fechaFin.set('');
+    
+    // Inicializar Flatpickr después de que el modal se renderice en el DOM
+    setTimeout(() => {
+      this.datePickerInstance = flatpickr('#rango-fechas', {
+        mode: 'range',
+        dateFormat: 'Y-m-d',
+        // ¡Se eliminó la línea del placeholder!
+        onChange: (selectedDates) => {
+          const input = document.getElementById('rango-fechas');
+          if (selectedDates.length === 2) {
+            this.fechaInicio.set(selectedDates[0].toISOString());
+            this.fechaFin.set(selectedDates[1].toISOString());
+            input?.classList.add('border-indigo-500', 'ring-2', 'ring-indigo-500/20');
+          } else if (selectedDates.length === 0) {
+            this.fechaInicio.set('');
+            this.fechaFin.set('');
+            input?.classList.remove('border-indigo-500', 'ring-2', 'ring-indigo-500/20');
+          }
+        }
+      });
+    }, 100);
     
     this.http.get(`${environment.apiUrl}/partner/history-orders/${this.token}`).subscribe({
-      next: (res: any) => {
-        if (res.ok) {
-          this.historialPedidos.set(res.pedidos);
-          setTimeout(() => this.actualizarGrafico(res.pedidos), 100); // Dibuja la gráfica al cargar
-        }
-        this.cargandoHistorial.set(false);
-      },
+      next: (res: any) => { if (res.ok) { this.historialPedidos.set(res.pedidos); setTimeout(() => this.actualizarGraficos(res.pedidos), 100); } this.cargandoHistorial.set(false); },
       error: () => { this.historialPedidos.set([]); this.cargandoHistorial.set(false); }
     });
   }
 
-  cerrarHistorial() { this.modalHistorialAbierto.set(false); }
+  limpiarFechas() {
+    if(this.datePickerInstance) this.datePickerInstance.clear();
+  }
 
+  cerrarHistorial() { this.modalHistorialAbierto.set(false); }
   formatPrice(price: number): string { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(price); }
 }
