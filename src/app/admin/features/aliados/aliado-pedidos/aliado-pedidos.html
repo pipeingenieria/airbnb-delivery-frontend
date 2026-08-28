@@ -177,9 +177,9 @@
             </div>
 
             <!-- Píldoras de Estado con reset de página -->
-            <div class="md:col-span-5 flex p-1.5 rounded-xl shadow-sm border overflow-hidden" [ngClass]="isDarkMode() ? 'bg-slate-950 border-slate-700' : 'bg-gray-100 border-gray-300'">
-              @for (estado of ['Todos', 'Completados', 'Pendientes', 'Rechazados']; track estado) {
-                <button (click)="filtroEstado.set(estado); paginaActual.set(1)" class="flex-1 py-1.5 text-sm font-bold transition-all rounded-lg"
+            <div class="md:col-span-5 flex p-1.5 rounded-xl shadow-sm border overflow-x-auto no-scrollbar" [ngClass]="isDarkMode() ? 'bg-slate-950 border-slate-700' : 'bg-gray-100 border-gray-300'">
+              @for (estado of ['Todos', 'Urgentes (Cocina)', 'Completados', 'Pendientes (Pago)', 'Rechazados']; track estado) {
+                <button (click)="filtroEstado.set(estado); paginaActual.set(1)" class="flex-1 py-1.5 px-3 whitespace-nowrap text-sm font-bold transition-all rounded-lg"
                         [ngClass]="filtroEstado() === estado ? 'bg-indigo-600 text-white shadow-md' : (isDarkMode() ? 'text-slate-400 hover:text-white' : 'text-gray-600 hover:bg-white')">
                   {{ estado }}
                 </button>
@@ -222,10 +222,10 @@
                 <table class="w-full text-left border-collapse whitespace-nowrap">
                   <thead>
                     <tr class="text-[10px] uppercase tracking-widest border-b" [ngClass]="isDarkMode() ? 'bg-slate-950 border-slate-800 text-slate-400' : 'bg-gray-100 border-gray-200 text-gray-500'">
-                      <th class="px-6 py-4 font-bold">Referencia / MP</th>
+                      <th class="px-6 py-4 font-bold">Referencia / MP / Fecha</th>
                       <th class="px-6 py-4 font-bold">Destino y Dirección</th>
                       <th class="px-6 py-4 font-bold">Productos</th>
-                      <th class="px-6 py-4 font-bold">T. Estimado</th>
+                      <th class="px-6 py-4 font-bold">Edad del Pedido</th>
                       <th class="px-6 py-4 font-bold text-right">Monto</th>
                       <th class="px-6 py-4 font-bold text-center">Estado Final</th>
                     </tr>
@@ -234,15 +234,22 @@
                     <!-- ITERANDO SOBRE pedidosPaginados() -->
                     @for (orden of pedidosPaginados(); track orden.id) {
                       <tr class="transition-colors group" [ngClass]="isDarkMode() ? 'hover:bg-slate-800/30' : 'hover:bg-gray-50'">
-                        <td class="px-6 py-4">
+                        <td class="px-6 py-4 align-top w-48">
                           <span class="font-black block" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">#ORD-{{ orden.id }}</span>
-                          @if (orden.liquidacion?.gateway_tx_id) { <span class="text-[10px] font-mono text-indigo-500 block mt-0.5">MP: {{ orden.liquidacion.gateway_tx_id }}</span> }
+                          <!-- FECHA RESTAURADA -->
+                          <span class="text-[10px] font-medium opacity-60 mt-1 block">{{ orden.creado_en | date:'MMM d, h:mm a' }}</span>
+                          <!-- ID MERCADOPAGO TRUNCADO PARA NO DAÑAR LA UI -->
+                          @if (orden.liquidacion?.gateway_tx_id) { 
+                            <span class="text-[10px] font-mono text-indigo-500 block mt-1 truncate max-w-[140px] px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20" title="{{ orden.liquidacion.gateway_tx_id }}">
+                              MP: {{ orden.liquidacion.gateway_tx_id }}
+                            </span> 
+                          }
                         </td>
-                        <td class="px-6 py-4">
+                        <td class="px-6 py-4 align-top">
                           <span class="block font-bold text-[13px]">{{ orden.propiedad?.nombre || 'Propiedad No Asignada' }}</span>
                           <span class="text-[11px] opacity-70 mt-0.5 block truncate max-w-[200px]">{{ orden.propiedad?.direccion_apto || 'Sin dirección' }}</span>
                         </td>
-                        <td class="px-6 py-4 max-w-[200px]">
+                        <td class="px-6 py-4 align-top max-w-[200px]">
                           <details class="cursor-pointer group/details [&_summary::-webkit-details-marker]:hidden">
                             <summary class="font-bold text-indigo-500 flex items-center gap-1 hover:text-indigo-400 text-xs">
                               <svg class="w-3 h-3 transition-transform group-open/details:rotate-90" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
@@ -255,16 +262,16 @@
                             </ul>
                           </details>
                         </td>
-                        <td class="px-6 py-4">
-                          <span class="flex items-center gap-1.5 text-xs">
-                            <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            {{ getTiempoEstimado(orden.creado_en) }}
+                        <td class="px-6 py-4 align-top">
+                          <span class="flex items-center gap-1.5 text-xs font-bold" [ngClass]="isDarkMode() ? 'text-amber-400' : 'text-amber-600'">
+                            <svg class="w-4 h-4 opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            {{ getTiempoTranscurrido(orden.creado_en) }}
                           </span>
                         </td>
-                        <td class="px-6 py-4 text-right font-black" [ngClass]="isDarkMode() ? 'text-emerald-400' : 'text-emerald-600'">
+                        <td class="px-6 py-4 align-top text-right font-black" [ngClass]="isDarkMode() ? 'text-emerald-400' : 'text-emerald-600'">
                           {{ formatPrice(orden.monto_total) }}
                         </td>
-                        <td class="px-6 py-4 text-center">
+                        <td class="px-6 py-4 align-top text-center">
                           <span class="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest inline-block border shadow-sm"
                                 [ngClass]="{
                                   'bg-emerald-500/10 text-emerald-400 border-emerald-500/20': orden.estado_operativo === 'Entregado' || orden.estado_operativo === 'Aprobado - Por Preparar' || orden.estado_operativo === 'En Camino',
@@ -285,11 +292,11 @@
               <div class="px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4" [ngClass]="isDarkMode() ? 'bg-slate-900 border-slate-800' : 'bg-gray-50 border-gray-200'">
                 <div class="flex items-center gap-2">
                   <span class="text-xs font-bold uppercase tracking-widest" [ngClass]="isDarkMode() ? 'text-slate-500' : 'text-gray-500'">Mostrar:</span>
-                  <select (change)="cambiarItemsPorPagina($event)" class="text-sm font-bold bg-transparent outline-none cursor-pointer" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">
-                    <option value="10">10 órdenes</option>
-                    <option value="20">20 órdenes</option>
-                    <option value="50">50 órdenes</option>
-                    <option value="100">100 órdenes</option>
+                  <select (change)="cambiarItemsPorPagina($event)" class="text-sm font-bold p-1 rounded-lg border outline-none cursor-pointer transition-colors" [ngClass]="isDarkMode() ? 'bg-slate-800 border-slate-700 text-white hover:border-indigo-500' : 'bg-white border-gray-300 text-gray-900 hover:border-indigo-500'">
+                    <option value="10" [ngClass]="isDarkMode() ? 'bg-slate-800 text-white' : ''">10 órdenes</option>
+                    <option value="20" [ngClass]="isDarkMode() ? 'bg-slate-800 text-white' : ''">20 órdenes</option>
+                    <option value="50" [ngClass]="isDarkMode() ? 'bg-slate-800 text-white' : ''">50 órdenes</option>
+                    <option value="100" [ngClass]="isDarkMode() ? 'bg-slate-800 text-white' : ''">100 órdenes</option>
                   </select>
                 </div>
                 
