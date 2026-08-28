@@ -75,41 +75,31 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
   }
   iniciarAutoRecarga() { this.pollingInterval = setInterval(() => { this.cargarPedidos(); }, 15000); }
   cambiarEstado(pedidoId: number, nuevoEstado: string) {
-    if (nuevoEstado === 'En Camino') {
-      // 1. Activamos la UI de despacho
-      this.pedidoEnDespacho.set(pedidoId);
-      this.animacionDespacho.set(true);
+    // 1. Activamos la UI de despacho
+    this.pedidoEnDespacho.set(pedidoId);
+    this.animacionDespacho.set(true);
 
-      // 2. Ejecutamos la orden en el servidor de fondo
-      this.http.patch(`${environment.apiUrl}/partner/order/${pedidoId}/status`, { estado: nuevoEstado })
-        .subscribe({
-          next: (res: any) => {
-            // 3. Dejamos que la moto cruce la pantalla (2.5 segundos)
-            setTimeout(() => {
-              this.animacionDespacho.set(false);
-              this.pedidoEnDespacho.set(null);
-              if (res.ok) this.cargarPedidos(); // Recarga la UI de fondo
-            }, 2500);
-          },
-          error: () => {
+    // 2. Ejecutamos la orden en el servidor
+    this.http.patch(`${environment.apiUrl}/partner/order/${pedidoId}/status`, { estado: nuevoEstado })
+      .subscribe({
+        next: (res: any) => {
+          // 3. Dejamos que la moto cruce la pantalla (2.5 segundos)
+          setTimeout(() => {
             this.animacionDespacho.set(false);
             this.pedidoEnDespacho.set(null);
-          }
-        });
-
-    } else {
-      // Lógica normal para marcar como "Entregado" sin la animación de la moto
-      this.http.patch(`${environment.apiUrl}/partner/order/${pedidoId}/status`, { estado: nuevoEstado })
-        .subscribe((res: any) => {
-          if (res.ok) {
-            if (nuevoEstado === 'Entregado') {
+            
+            if (res.ok) {
+              // ¡Adiós pedido! Ya está en manos del domiciliario.
+              // Lo removemos del tablero de la cocina.
               this.pedidosActivos.update(list => list.filter(p => p.id !== pedidoId));
-            } else {
-              this.cargarPedidos();
             }
-          }
-        });
-    }
+          }, 2500);
+        },
+        error: () => {
+          this.animacionDespacho.set(false);
+          this.pedidoEnDespacho.set(null);
+        }
+      });
   }
 
   // =========================================================
