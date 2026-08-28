@@ -2,12 +2,13 @@ import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../../../environments/environment'; // Ajusta tu ruta[cite: 20]
+import { FormsModule } from '@angular/forms'; 
+import { environment } from '../../../../../environments/environment'; 
 
 @Component({
   selector: 'app-aliado-pedidos',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './aliado-pedidos.html',
   styleUrls: ['./aliado-pedidos.scss'] 
 })
@@ -22,27 +23,6 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
   
   private token: string = '';
   private pollingInterval: any;
-
-  // --- NUEVAS SEÑALES PARA EL DASHBOARD HISTÓRICO ---
-  modalHistorialAbierto = signal<boolean>(false);
-  historialPedidos = signal<any[]>([]);
-  cargandoHistorial = signal<boolean>(false);
-
-  // Calculadora automática de métricas para el Dashboard
-  metricas = computed(() => {
-    const pedidos = this.historialPedidos();
-    const entregados = pedidos.filter(p => p.estado_operativo === 'Entregado');
-    const rechazados = pedidos.filter(p => p.estado_operativo === 'Rechazado' || p.estado_operativo === 'Cancelado');
-    const ingresos = entregados.reduce((acc, p) => acc + (p.monto_total || 0), 0);
-
-    return {
-      total: pedidos.length,
-      entregados: entregados.length,
-      rechazados: rechazados.length,
-      ingresos: ingresos,
-      tasaRechazo: pedidos.length ? Math.round((rechazados.length / pedidos.length) * 100) : 0
-    };
-  });
 
   ngOnInit() {
     this.route.paramMap.subscribe(params => {
@@ -89,24 +69,86 @@ export class AliadoPedidosComponent implements OnInit, OnDestroy {
       });
   }
 
-  // --- LÓGICA DEL DASHBOARD HISTÓRICO ---
+  // --- LÓGICA DEL DASHBOARD HISTÓRICO ULTRA-PRO ---
+  modalHistorialAbierto = signal<boolean>(false);
+  historialPedidos = signal<any[]>([]);
+  cargandoHistorial = signal<boolean>(false);
+
+  // Filtros interactivos (Estilo BotCompany)
+  filtroTexto = signal<string>('');
+  filtroEstado = signal<string>('Todos');
+
+  // 1. Filtrado en tiempo real
+  pedidosFiltrados = computed(() => {
+    let filtrados = this.historialPedidos();
+    const estado = this.filtroEstado();
+    const texto = this.filtroTexto().toLowerCase().trim();
+
+    // Filtro por píldoras de estado
+    if (estado === 'Completados') filtrados = filtrados.filter(p => p.estado_operativo === 'Entregado');
+    else if (estado === 'Pendientes') filtrados = filtrados.filter(p => ['En Camino', 'Aprobado - Por Preparar', 'Pendiente Pago'].includes(p.estado_operativo));
+    else if (estado === 'Rechazados') filtrados = filtrados.filter(p => ['Rechazado', 'Cancelado'].includes(p.estado_operativo));
+
+    // Filtro de búsqueda (ID, Apartamento o Nombre de Producto)
+    if (texto) {
+      filtrados = filtrados.filter(p => 
+        p.id.toString().includes(texto) ||
+        (p.propiedad?.nombre || '').toLowerCase().includes(texto) ||
+        (p.detalles || []).some((d: any) => (d.item?.nombre || '').toLowerCase().includes(texto))
+      );
+    }
+    return filtrados;
+  });
+
+  // 2. Calculadora de KPIs dinámicos
+  metricas = computed(() => {
+    const pedidos = this.pedidosFiltrados();
+    const entregados = pedidos.filter(p => p.estado_operativo === 'Entregado');
+    const rechazadosArray = pedidos.filter(p => ['Rechazado', 'Cancelado'].includes(p.estado_operativo)); // Capturamos los rechazados
+    const ingresos = entregados.reduce((acc, p) => acc + (p.monto_total || 0), 0);
+    
+    // Extracción de Top Productos
+    const conteoProductos: { [key: string]: { cantidad: number, ingresos: number } } = {};
+    entregados.forEach(p => {
+      (p.detalles || []).forEach((d: any) => {
+        const nombre = d.item?.nombre || 'Producto Desconocido';
+        if (!conteoProductos[nombre]) conteoProductos[nombre] = { cantidad: 0, ingresos: 0 };
+        conteoProductos[nombre].cantidad += d.cantidad;
+        conteoProductos[nombre].ingresos += (d.precio_unitario * d.cantidad);
+      });
+    });
+
+    const topProductos = Object.entries(conteoProductos)
+      .map(([nombre, datos]) => ({ nombre, ...datos }))
+      .sort((a, b) => b.ingresos - a.ingresos)
+      .slice(0, 5);
+
+    const maxIngresoProducto = topProductos.length ? topProductos[0].ingresos : 1;
+
+    return {
+      total: pedidos.length,
+      entregados: entregados.length, // Usamos 'entregados' para que haga match con el HTML
+      rechazados: rechazadosArray.length, // Devolvemos el conteo crudo
+      ingresos: ingresos,
+      ticketPromedio: entregados.length ? ingresos / entregados.length : 0,
+      tasaRechazo: pedidos.length ? Math.round((rechazadosArray.length / pedidos.length) * 100) : 0,
+      topProductos,
+      maxIngresoProducto
+    };
+  });
+  
   abrirHistorial() {
     this.modalHistorialAbierto.set(true);
     this.cargandoHistorial.set(true);
+    this.filtroEstado.set('Todos');
+    this.filtroTexto.set('');
     
-    // Llamada 100% real a la base de datos
     this.http.get(`${environment.apiUrl}/partner/history-orders/${this.token}`).subscribe({
       next: (res: any) => {
-        if (res.ok) {
-          this.historialPedidos.set(res.pedidos);
-        }
+        if (res.ok) this.historialPedidos.set(res.pedidos);
         this.cargandoHistorial.set(false);
       },
-      error: () => {
-        // Si hay error en la red, dejamos el historial vacío
-        this.historialPedidos.set([]);
-        this.cargandoHistorial.set(false);
-      }
+      error: () => { this.historialPedidos.set([]); this.cargandoHistorial.set(false); }
     });
   }
 
