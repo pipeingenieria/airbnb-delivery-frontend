@@ -30,7 +30,7 @@
         <button (click)="abrirHistorial()" class="hidden sm:flex px-4 py-2.5 rounded-xl border font-bold text-sm transition-all items-center gap-2 shadow-sm hover:shadow-md"
                 [ngClass]="isDarkMode() ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20' : 'bg-white border-indigo-200 text-indigo-600 hover:bg-indigo-50'">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-          Métricas y Entregas
+          Historial de Pagos
         </button>
         
         <!-- Reloj / Botón de Tema -->
@@ -222,7 +222,7 @@
                 <table class="w-full text-left border-collapse whitespace-nowrap">
                   <thead>
                     <tr class="text-[10px] uppercase tracking-widest border-b" [ngClass]="isDarkMode() ? 'bg-slate-950 border-slate-800 text-slate-400' : 'bg-gray-100 border-gray-200 text-gray-500'">
-                      <th class="px-6 py-4 font-bold">Referencia / MP / Fecha</th>
+                      <th class="px-6 py-4 font-bold">Referencia / MP</th>
                       <th class="px-6 py-4 font-bold">Destino y Dirección</th>
                       <th class="px-6 py-4 font-bold">Productos</th>
                       <th class="px-6 py-4 font-bold">Edad del Pedido</th>
@@ -234,21 +234,24 @@
                     <!-- ITERANDO SOBRE pedidosPaginados() -->
                     @for (orden of pedidosPaginados(); track orden.id) {
                       <tr class="transition-colors group" [ngClass]="isDarkMode() ? 'hover:bg-slate-800/30' : 'hover:bg-gray-50'">
+                        
+                        <!-- 1. REFERENCIA Y MP -->
                         <td class="px-6 py-4 align-top w-48">
                           <span class="font-black block" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">#ORD-{{ orden.id }}</span>
-                          <!-- FECHA RESTAURADA -->
-                          <span class="text-[10px] font-medium opacity-60 mt-1 block">{{ orden.creado_en | date:'MMM d, h:mm a' }}</span>
-                          <!-- ID MERCADOPAGO TRUNCADO PARA NO DAÑAR LA UI -->
                           @if (orden.liquidacion?.gateway_tx_id) { 
                             <span class="text-[10px] font-mono text-indigo-500 block mt-1 truncate max-w-[140px] px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20" title="{{ orden.liquidacion.gateway_tx_id }}">
                               MP: {{ orden.liquidacion.gateway_tx_id }}
                             </span> 
                           }
                         </td>
+                        
+                        <!-- 2. DESTINO -->
                         <td class="px-6 py-4 align-top">
                           <span class="block font-bold text-[13px]">{{ orden.propiedad?.nombre || 'Propiedad No Asignada' }}</span>
                           <span class="text-[11px] opacity-70 mt-0.5 block truncate max-w-[200px]">{{ orden.propiedad?.direccion_apto || 'Sin dirección' }}</span>
                         </td>
+                        
+                        <!-- 3. PRODUCTOS -->
                         <td class="px-6 py-4 align-top max-w-[200px]">
                           <details class="cursor-pointer group/details [&_summary::-webkit-details-marker]:hidden">
                             <summary class="font-bold text-indigo-500 flex items-center gap-1 hover:text-indigo-400 text-xs">
@@ -262,15 +265,24 @@
                             </ul>
                           </details>
                         </td>
+                        
+                        <!-- 4. EDAD DEL PEDIDO (FECHA REAL + TIEMPO TRANSCURRIDO) -->
                         <td class="px-6 py-4 align-top">
-                          <span class="flex items-center gap-1.5 text-xs font-bold" [ngClass]="isDarkMode() ? 'text-amber-400' : 'text-amber-600'">
-                            <svg class="w-4 h-4 opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                          <span class="block font-bold text-[12px]" [ngClass]="isDarkMode() ? 'text-white' : 'text-gray-900'">
+                            {{ orden.creado_en | date:'MMM d, h:mm a' }}
+                          </span>
+                          <span class="flex items-center gap-1 text-[11px] font-bold mt-1" [ngClass]="isDarkMode() ? 'text-amber-400' : 'text-amber-600'">
+                            <svg class="w-3.5 h-3.5 opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             {{ getTiempoTranscurrido(orden.creado_en) }}
                           </span>
                         </td>
+                        
+                        <!-- 5. MONTO -->
                         <td class="px-6 py-4 align-top text-right font-black" [ngClass]="isDarkMode() ? 'text-emerald-400' : 'text-emerald-600'">
                           {{ formatPrice(orden.monto_total) }}
                         </td>
+                        
+                        <!-- 6. ESTADO -->
                         <td class="px-6 py-4 align-top text-center">
                           <span class="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest inline-block border shadow-sm"
                                 [ngClass]="{
